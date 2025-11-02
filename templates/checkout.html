@@ -1,0 +1,1062 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Place your order - Jumia Kenya{% endblock %}
+
+{% block extra_css %}
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #f5f5f5;
+        color: #333;
+    }
+
+    /* Header */
+    .checkout-header {
+        background: white;
+        padding: 20px 0;
+        border-bottom: 1px solid #f0f0f0;
+        margin-bottom: 20px;
+    }
+
+    .checkout-header .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .checkout-title {
+        font-size: 24px;
+        font-weight: 500;
+        color: #282828;
+    }
+
+    .checkout-features {
+        display: flex;
+        gap: 30px;
+    }
+
+    .feature-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 13px;
+        color: #666;
+    }
+
+    .feature-icon {
+        font-size: 20px;
+        color: #282828;
+    }
+
+    /* Main Layout */
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 15px;
+    }
+
+    .checkout-layout {
+        display: grid;
+        grid-template-columns: 1fr 380px;
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    /* Checkout Steps */
+    .checkout-steps {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .step-card {
+        background: white;
+        border-radius: 4px;
+        border: 1px solid #f0f0f0;
+    }
+
+    .step-header {
+        padding: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .step-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 16px;
+        font-weight: bold;
+        color: #282828;
+    }
+
+    .step-number {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #28a745;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+    }
+
+    .step-number.pending {
+        background: #ddd;
+        color: #666;
+    }
+
+    .change-btn {
+        color: #f68b1e;
+        text-decoration: none;
+        font-size: 14px;
+        cursor: pointer;
+    }
+
+    .change-btn:hover {
+        text-decoration: underline;
+    }
+
+    .step-content {
+        padding: 20px;
+    }
+
+    /* Address Display */
+    .address-display {
+        font-size: 14px;
+        color: #666;
+        line-height: 1.6;
+    }
+
+    .address-name {
+        font-weight: bold;
+        color: #282828;
+        margin-bottom: 5px;
+    }
+
+    /* Delivery Options */
+    .delivery-options {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .delivery-option {
+        border: 2px solid #f0f0f0;
+        border-radius: 4px;
+        padding: 15px;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .delivery-option:hover {
+        border-color: #f68b1e;
+    }
+
+    .delivery-option.active {
+        border-color: #f68b1e;
+        background: #feefea;
+    }
+
+    .delivery-option-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .option-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: bold;
+        color: #282828;
+    }
+
+    .option-icon {
+        font-size: 20px;
+        color: #f68b1e;
+    }
+
+    .option-details {
+        font-size: 13px;
+        color: #666;
+        line-height: 1.5;
+    }
+
+    .delivery-date {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        margin-top: 5px;
+    }
+
+    .fee-badge {
+        font-weight: bold;
+        color: #282828;
+    }
+
+    /* Pickup Station Selector */
+    .station-selector {
+        margin-top: 15px;
+        padding: 15px;
+        background: #f9f9f9;
+        border-radius: 4px;
+        display: none;
+    }
+
+    .station-selector.active {
+        display: block;
+    }
+
+    .station-select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+        margin-top: 10px;
+    }
+
+    .station-info {
+        margin-top: 10px;
+        padding: 10px;
+        background: white;
+        border-radius: 4px;
+        font-size: 13px;
+        color: #666;
+    }
+
+    /* Shipments */
+    .shipments {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .shipment {
+        border: 1px solid #f0f0f0;
+        border-radius: 4px;
+        padding: 15px;
+    }
+
+    .shipment-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .shipment-title {
+        font-size: 14px;
+        color: #666;
+    }
+
+    .vendor-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: #feefea;
+        color: #f68b1e;
+        padding: 3px 10px;
+        border-radius: 3px;
+        font-size: 12px;
+        font-weight: bold;
+    }
+
+    .shipment-items {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .shipment-item {
+        display: grid;
+        grid-template-columns: 60px 1fr auto;
+        gap: 15px;
+    }
+
+    .item-image {
+        width: 60px;
+        height: 60px;
+        object-fit: contain;
+        border: 1px solid #f0f0f0;
+        border-radius: 4px;
+    }
+
+    .item-info {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+    }
+
+    .item-name {
+        font-size: 13px;
+        color: #282828;
+    }
+
+    .item-quantity {
+        font-size: 12px;
+        color: #666;
+    }
+
+    .item-price {
+        font-size: 14px;
+        font-weight: bold;
+        color: #282828;
+    }
+
+    /* Modify Cart Link */
+    .modify-cart {
+        text-align: center;
+        margin-top: 15px;
+    }
+
+    .modify-cart a {
+        color: #f68b1e;
+        text-decoration: none;
+        font-size: 14px;
+    }
+
+    .modify-cart a:hover {
+        text-decoration: underline;
+    }
+
+    /* Payment Method */
+    .payment-methods {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .payment-method {
+        border: 2px solid #f0f0f0;
+        border-radius: 4px;
+        padding: 15px;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .payment-method:hover {
+        border-color: #f68b1e;
+    }
+
+    .payment-method.active {
+        border-color: #f68b1e;
+        background: #feefea;
+    }
+
+    .payment-icon {
+        width: 50px;
+        height: 35px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .payment-icon img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+    }
+
+    .payment-details {
+        flex: 1;
+    }
+
+    .payment-title {
+        font-weight: bold;
+        color: #282828;
+        margin-bottom: 3px;
+    }
+
+    .payment-description {
+        font-size: 12px;
+        color: #666;
+    }
+
+    /* Order Summary */
+    .order-summary {
+        background: white;
+        border-radius: 4px;
+        padding: 20px;
+        position: sticky;
+        top: 20px;
+        height: fit-content;
+    }
+
+    .summary-title {
+        font-size: 16px;
+        font-weight: bold;
+        color: #282828;
+        margin-bottom: 20px;
+    }
+
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        font-size: 14px;
+    }
+
+    .summary-label {
+        color: #666;
+    }
+
+    .summary-value {
+        color: #282828;
+        font-weight: 500;
+    }
+
+    .summary-total {
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 2px solid #f0f0f0;
+    }
+
+    .total-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .total-label {
+        font-size: 16px;
+        font-weight: bold;
+        color: #282828;
+    }
+
+    .total-value {
+        font-size: 20px;
+        font-weight: bold;
+        color: #282828;
+    }
+
+    /* Coupon Input */
+    .coupon-section {
+        margin-bottom: 20px;
+    }
+
+    .coupon-input-group {
+        display: flex;
+        gap: 10px;
+    }
+
+    .coupon-input {
+        flex: 1;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    .apply-coupon-btn {
+        padding: 10px 20px;
+        background: white;
+        color: #f68b1e;
+        border: 1px solid #f68b1e;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: all 0.3s;
+    }
+
+    .apply-coupon-btn:hover {
+        background: #f68b1e;
+        color: white;
+    }
+
+    .coupon-applied {
+        margin-top: 10px;
+        padding: 10px;
+        background: #d4edda;
+        border: 1px solid #c3e6cb;
+        border-radius: 4px;
+        color: #155724;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .remove-coupon {
+        cursor: pointer;
+        color: #155724;
+    }
+
+    /* Confirm Button */
+    .confirm-btn {
+        width: 100%;
+        padding: 15px;
+        background: #f68b1e;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background 0.3s;
+    }
+
+    .confirm-btn:hover {
+        background: #e67e0f;
+    }
+
+    .terms-notice {
+        text-align: center;
+        font-size: 12px;
+        color: #999;
+        margin-top: 15px;
+    }
+
+    .terms-notice a {
+        color: #f68b1e;
+        text-decoration: none;
+    }
+
+    .terms-notice a:hover {
+        text-decoration: underline;
+    }
+
+    /* Back Link */
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        color: #f68b1e;
+        text-decoration: none;
+        font-size: 14px;
+        margin-bottom: 20px;
+    }
+
+    .back-link:hover {
+        text-decoration: underline;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+        .checkout-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .order-summary {
+            position: static;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .checkout-features {
+            display: none;
+        }
+
+        .shipment-item {
+            grid-template-columns: 50px 1fr;
+        }
+
+        .item-price {
+            grid-column: 2;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Checkout Header -->
+<div class="checkout-header">
+    <div class="container">
+        <h1 class="checkout-title">Place your order</h1>
+        <div class="checkout-features">
+            <div class="feature-item">
+                <i class="fas fa-phone feature-icon"></i>
+                <div>
+                    <strong>Need Help?</strong><br>
+                    Contact us
+                </div>
+            </div>
+            <div class="feature-item">
+                <i class="fas fa-undo feature-icon"></i>
+                <div>
+                    <strong>Easy</strong><br>
+                    Returns
+                </div>
+            </div>
+            <div class="feature-item">
+                <i class="fas fa-lock feature-icon"></i>
+                <div>
+                    <strong>Secure</strong><br>
+                    Payments
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <a href="{% url 'cart' %}" class="back-link">
+        <i class="fas fa-chevron-left"></i> Go back & continue shopping
+    </a>
+
+    <div class="checkout-layout">
+        <!-- Checkout Steps -->
+        <div class="checkout-steps">
+            <!-- Step 1: Customer Address -->
+            <div class="step-card">
+                <div class="step-header">
+                    <div class="step-title">
+                        <span class="step-number">✓</span>
+                        1. CUSTOMER ADDRESS
+                    </div>
+                    <a href="#" class="change-btn" onclick="toggleAddressChange(); return false;">Change</a>
+                </div>
+                <div class="step-content">
+                    {% if default_address %}
+                    <div class="address-display" id="selectedAddress">
+                        <div class="address-name">{{ default_address.full_name }}</div>
+                        <div>{{ default_address.street_address }}</div>
+                        <div>{{ default_address.area }}, {{ default_address.city }}</div>
+                        <div>{{ default_address.region }} | +{{ default_address.phone_number }}</div>
+                    </div>
+
+                    <div id="addressSelector" style="display: none; margin-top: 15px;">
+                        <select class="station-select" onchange="changeAddress(this.value)">
+                            {% for address in addresses %}
+                            <option value="{{ address.id }}" {% if address.id == default_address.id %}selected{% endif %}>
+                                {{ address.full_name }} - {{ address.city }}, {{ address.region }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% else %}
+                    <p>No address found. <a href="#" style="color: #f68b1e;">Add an address</a></p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Step 2: Delivery Details -->
+            <div class="step-card">
+                <div class="step-header">
+                    <div class="step-title">
+                        <span class="step-number">✓</span>
+                        2. DELIVERY DETAILS
+                    </div>
+                    <a href="#" class="change-btn" onclick="toggleDeliveryChange(); return false;">Change</a>
+                </div>
+                <div class="step-content">
+                    <div class="delivery-options">
+                        <!-- Pickup Station -->
+                        <div class="delivery-option {% if delivery_method == 'pickup_station' %}active{% endif %}" 
+                             onclick="selectDeliveryMethod('pickup_station')">
+                            <div class="delivery-option-header">
+                                <div class="option-title">
+                                    <i class="fas fa-store option-icon"></i>
+                                    Pick-up Station
+                                </div>
+                                <div class="fee-badge">KSh <span id="pickupFee">150</span></div>
+                            </div>
+                            <div class="option-details">
+                                <div>Collect from one of our pick-up stations</div>
+                                <div class="delivery-date">
+                                    Delivery between <strong id="pickupStartDate">{{ current_date|date:"d M" }}</strong> 
+                                    and <strong id="pickupEndDate">{{ future_date|date:"d M" }}</strong>
+                                </div>
+                            </div>
+
+                            <div class="station-selector {% if delivery_method == 'pickup_station' %}active{% endif %}" id="stationSelector">
+                                <label style="font-weight: bold; margin-bottom: 5px; display: block;">Select Pickup Station</label>
+                                <select class="station-select" id="pickupStationSelect" onchange="selectPickupStation(this.value)">
+                                    <option value="">Choose a station...</option>
+                                    {% for station in pickup_stations %}
+                                    <option value="{{ station.id }}" 
+                                            data-name="{{ station.name }}"
+                                            data-address="{{ station.address }}"
+                                            data-hours="{{ station.operating_hours }}">
+                                        {{ station.name }} - {{ station.city }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+
+                                <div class="station-info" id="stationInfo" style="display: none;">
+                                    <div><strong id="stationName"></strong></div>
+                                    <div id="stationAddress"></div>
+                                    <div>Operating Hours: <span id="stationHours"></span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Home Delivery -->
+                        <div class="delivery-option {% if delivery_method == 'home_delivery' %}active{% endif %}" 
+                             onclick="selectDeliveryMethod('home_delivery')">
+                            <div class="delivery-option-header">
+                                <div class="option-title">
+                                    <i class="fas fa-truck option-icon"></i>
+                                    Door Delivery
+                                </div>
+                                <div class="fee-badge">KSh <span id="homeFee">300</span></div>
+                            </div>
+                            <div class="option-details">
+                                <div>Delivered directly to your address</div>
+                                <div class="delivery-date">
+                                    Ready for delivery between <strong>{{ current_date|date:"d M" }}</strong> 
+                                    and <strong>{{ future_date|date:"d M" }}</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Shipments -->
+                    <div class="shipments">
+                        {% for shipment in shipments %}
+                        <div class="shipment">
+                            <div class="shipment-header">
+                                <span class="shipment-title">Shipment {{ forloop.counter }}/{{ shipments|length }}</span>
+                                <span>Fulfilled by {{ shipment.vendor.business_name }}</span>
+                                {% if shipment.vendor.is_verified %}
+                                <span class="vendor-badge">
+                                    <i class="fas fa-bolt"></i> EXPRESS
+                                </span>
+                                {% endif %}
+                            </div>
+
+                            <div class="shipment-items">
+                                {% for item in shipment.items %}
+                                <div class="shipment-item">
+                                    {% if item.product.images.first %}
+                                    <img src="{{ item.product.images.first.image.url }}" 
+                                         alt="{{ item.product.name }}" 
+                                         class="item-image">
+                                    {% else %}
+                                    <img src="{% static 'images/no-image.png' %}" 
+                                         alt="{{ item.product.name }}" 
+                                         class="item-image">
+                                    {% endif %}
+
+                                    <div class="item-info">
+                                        <div class="item-name">{{ item.product.name }}</div>
+                                        <div class="item-quantity">x{{ item.quantity }}</div>
+                                    </div>
+
+                                    <div class="item-price">KSh {{ item.total_price|floatformat:0 }}</div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="modify-cart">
+                        <a href="{% url 'cart' %}">Modify cart</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Payment Method -->
+            <div class="step-card">
+                <div class="step-header">
+                    <div class="step-title">
+                        <span class="step-number pending">3</span>
+                        3. PAYMENT METHOD
+                    </div>
+                    <a href="#" class="change-btn" onclick="togglePaymentChange(); return false;">Change</a>
+                </div>
+                <div class="step-content">
+                    <div class="payment-methods">
+                        <!-- M-Pesa -->
+                        <div class="payment-method active" onclick="selectPaymentMethod('mpesa', this)">
+                            <div class="payment-icon">
+                                <img src="{% static 'images/mpesa.png' %}" alt="M-Pesa">
+                            </div>
+                            <div class="payment-details">
+                                <div class="payment-title">Pay Now with M-Pesa</div>
+                                <div class="payment-description">Pay now fast and securely with your Mpesa account.</div>
+                            </div>
+                        </div>
+
+                        <!-- Card Payment -->
+                        <div class="payment-method" onclick="selectPaymentMethod('card', this)">
+                            <div class="payment-icon">
+                                <i class="fas fa-credit-card" style="font-size: 30px; color: #666;"></i>
+                            </div>
+                            <div class="payment-details">
+                                <div class="payment-title">Credit/Debit Card</div>
+                                <div class="payment-description">Pay securely with your credit or debit card.</div>
+                            </div>
+                        </div>
+
+                        <!-- Cash on Delivery -->
+                        <div class="payment-method" onclick="selectPaymentMethod('cash', this)">
+                            <div class="payment-icon">
+                                <i class="fas fa-money-bill-wave" style="font-size: 30px; color: #666;"></i>
+                            </div>
+                            <div class="payment-details">
+                                <div class="payment-title">Cash on Delivery</div>
+                                <div class="payment-description">Pay with cash when your order is delivered.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Summary -->
+        <div class="order-summary">
+            <div class="summary-title">Order summary</div>
+
+            <div class="summary-row">
+                <span class="summary-label">Item's total ({{ cart.total_items }})</span>
+                <span class="summary-value">KSh <span id="subtotalAmount">{{ subtotal|floatformat:0 }}</span></span>
+            </div>
+
+            <div class="summary-row">
+                <span class="summary-label">Delivery fees</span>
+                <span class="summary-value">KSh <span id="deliveryFeeAmount">{{ delivery_fee|floatformat:0 }}</span></span>
+            </div>
+
+            {% if discount > 0 %}
+            <div class="summary-row">
+                <span class="summary-label">Discount</span>
+                <span class="summary-value" style="color: #28a745;">-KSh <span id="discountAmount">{{ discount|floatformat:0 }}</span></span>
+            </div>
+            {% endif %}
+
+            <div class="summary-total">
+                <div class="total-row">
+                    <span class="total-label">Total</span>
+                    <span class="total-value">KSh <span id="totalAmount">{{ total|floatformat:0 }}</span></span>
+                </div>
+
+                <!-- Coupon Section -->
+                <div class="coupon-section">
+                    {% if coupon %}
+                    <div class="coupon-applied">
+                        <span>Coupon "{{ coupon.code }}" applied</span>
+                        <span class="remove-coupon" onclick="removeCoupon()">✕</span>
+                    </div>
+                    {% else %}
+                    <div class="coupon-input-group">
+                        <input type="text" class="coupon-input" id="couponInput" placeholder="Enter code here">
+                        <button class="apply-coupon-btn" onclick="applyCoupon()">APPLY</button>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <form method="POST" action="{% url 'place_order' %}" id="checkoutForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="payment_method" id="paymentMethodInput" value="mpesa">
+                    <button type="submit" class="confirm-btn">Confirm order</button>
+                </form>
+
+                <div class="terms-notice">
+                    By proceeding, you are automatically accepting the
+                    <a href="#">Terms & Conditions</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentDeliveryMethod = '{{ delivery_method }}';
+    let currentPaymentMethod = 'mpesa';
+    let selectedStationId = null;
+    let selectedAddressId = {{ default_address.id|default:'null' }};
+
+    // Toggle address selector
+    function toggleAddressChange() {
+        const selector = document.getElementById('addressSelector');
+        selector.style.display = selector.style.display === 'none' ? 'block' : 'none';
+    }
+
+    // Change address
+    function changeAddress(addressId) {
+        selectedAddressId = addressId;
+        // Reload or update via AJAX
+        if (currentDeliveryMethod === 'home_delivery') {
+            updateDeliveryFee();
+        }
+    }
+
+    // Toggle delivery change
+    function toggleDeliveryChange() {
+        // Can be implemented to show/hide delivery options
+    }
+
+    // Toggle payment change
+    function togglePaymentChange() {
+        // Can be implemented to show/hide payment options
+    }
+
+    // Select delivery method
+    function selectDeliveryMethod(method) {
+        currentDeliveryMethod = method;
+
+        // Update UI
+        document.querySelectorAll('.delivery-option').forEach(opt => {
+            opt.classList.remove('active');
+        });
+        event.currentTarget.classList.add('active');
+
+        // Show/hide station selector
+        const stationSelector = document.getElementById('stationSelector');
+        if (method === 'pickup_station') {
+            stationSelector.classList.add('active');
+        } else {
+            stationSelector.classList.remove('active');
+        }
+
+        // Update delivery fee
+        updateDeliveryFee();
+    }
+
+    // Select pickup station
+    function selectPickupStation(stationId) {
+        selectedStationId = stationId;
+
+        if (!stationId) {
+            document.getElementById('stationInfo').style.display = 'none';
+            return;
+        }
+
+        const select = document.getElementById('pickupStationSelect');
+        const option = select.options[select.selectedIndex];
+
+        document.getElementById('stationName').textContent = option.dataset.name;
+        document.getElementById('stationAddress').textContent = option.dataset.address;
+        document.getElementById('stationHours').textContent = option.dataset.hours;
+        document.getElementById('stationInfo').style.display = 'block';
+
+        // Update delivery fee
+        updateDeliveryFee();
+    }
+
+    // Update delivery fee via AJAX
+    function updateDeliveryFee() {
+        const data = {
+            delivery_method: currentDeliveryMethod,
+            station_id: selectedStationId,
+            address_id: selectedAddressId
+        };
+
+        fetch('{% url "update_delivery_method" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update amounts
+                document.getElementById('deliveryFeeAmount').textContent = Math.round(data.delivery_fee).toLocaleString();
+                document.getElementById('totalAmount').textContent = Math.round(data.total).toLocaleString();
+
+                // Update fee badges
+                if (currentDeliveryMethod === 'pickup_station') {
+                    document.getElementById('pickupFee').textContent = Math.round(data.delivery_fee);
+                } else {
+                    document.getElementById('homeFee').textContent = Math.round(data.delivery_fee);
+                }
+
+                // Update discount if present
+                if (data.discount > 0) {
+                    document.getElementById('discountAmount').textContent = Math.round(data.discount).toLocaleString();
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
+    // Select payment method
+    function selectPaymentMethod(method, element) {
+        currentPaymentMethod = method;
+        
+        // Update UI
+        document.querySelectorAll('.payment-method').forEach(pm => {
+            pm.classList.remove('active');
+        });
+        element.classList.add('active');
+
+        // Update hidden input
+        document.getElementById('paymentMethodInput').value = method;
+    }
+
+    // Apply coupon
+    function applyCoupon() {
+        const code = document.getElementById('couponInput').value.trim();
+
+        if (!code) {
+            alert('Please enter a coupon code');
+            return;
+        }
+
+        fetch('{% url "apply_coupon" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ code: code })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload(); // Reload to show coupon applied
+            } else {
+                alert(data.error || 'Failed to apply coupon');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred. Please try again.');
+        });
+    }
+
+    // Remove coupon
+    function removeCoupon() {
+        if (confirm('Remove this coupon?')) {
+            location.href = '#';
+        }
+    }
+
+    // Form validation before submit
+    document.getElementById('checkoutForm').addEventListener('submit', function(e) {
+        if (currentDeliveryMethod === 'pickup_station' && !selectedStationId) {
+            e.preventDefault();
+            alert('Please select a pickup station');
+            return false;
+        }
+
+        if (currentDeliveryMethod === 'home_delivery' && !selectedAddressId) {
+            e.preventDefault();
+            alert('Please select a delivery address');
+            return false;
+        }
+    });
+</script>
+{% endblock %}

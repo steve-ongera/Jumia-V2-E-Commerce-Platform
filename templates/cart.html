@@ -594,7 +594,7 @@
                     <span class="total-value" id="total">KSh {{ total|floatformat:0 }}</span>
                 </div>
 
-                <button class="checkout-btn" onclick="location.href='#">
+                <button class="checkout-btn" onclick="location.href={% url 'checkout'%}">
                     CHECKOUT (KSh {{ total|floatformat:0 }})
                 </button>
             </div>

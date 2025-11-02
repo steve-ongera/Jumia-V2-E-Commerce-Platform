@@ -1349,3 +1349,444 @@ def add_to_cart(request, product_id):
             return JsonResponse({'error': str(e)}, status=400)
     
     return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.http import JsonResponse
+from django.db import transaction
+from django.utils import timezone
+from .models import (
+    Cart, Order, OrderItem, Payment, Address, 
+    PickupStation, DeliveryZone, Coupon
+)
+from decimal import Decimal
+import json
+
+
+@login_required
+def checkout(request):
+    """Checkout page"""
+    
+    # Get user's cart
+    try:
+        cart = Cart.objects.get(user=request.user)
+        cart_items = cart.items.select_related(
+            'product__vendor',
+            'product__brand',
+            'variant'
+        ).prefetch_related('product__images').all()
+        
+        if not cart_items.exists():
+            messages.warning(request, 'Your cart is empty')
+            return redirect('cart')
+    except Cart.DoesNotExist:
+        messages.warning(request, 'Your cart is empty')
+        return redirect('cart')
+    
+    # Get user's addresses
+    addresses = request.user.addresses.all().order_by('-is_default', '-created_at')
+    default_address = addresses.filter(is_default=True).first() or addresses.first()
+    
+    # Get active pickup stations
+    pickup_stations = PickupStation.objects.filter(is_active=True).order_by('city', 'name')
+    
+    # Get delivery zones for pricing
+    delivery_zones = DeliveryZone.objects.filter(is_active=True)
+    
+    # Calculate subtotal
+    subtotal = cart.subtotal
+    
+    # Default delivery method and fee
+    delivery_method = request.session.get('delivery_method', 'pickup_station')
+    
+    # Calculate delivery fee based on method
+    if delivery_method == 'home_delivery' and default_address:
+        # Get delivery fee for user's location
+        delivery_zone = delivery_zones.filter(
+            region=default_address.region,
+            city=default_address.city
+        ).first()
+        delivery_fee = delivery_zone.delivery_fee if delivery_zone else Decimal('300.00')
+    else:
+        # Pickup station default fee
+        delivery_fee = Decimal('150.00')
+    
+    # Get applied coupon from session
+    coupon_code = request.session.get('coupon_code')
+    discount = Decimal('0.00')
+    coupon = None
+    
+    if coupon_code:
+        try:
+            coupon = Coupon.objects.get(
+                code=coupon_code,
+                is_active=True,
+                valid_from__lte=timezone.now(),
+                valid_to__gte=timezone.now()
+            )
+            
+            # Check minimum purchase
+            if subtotal >= coupon.minimum_purchase:
+                if coupon.discount_type == 'percentage':
+                    discount = (subtotal * coupon.discount_value) / 100
+                    if coupon.maximum_discount:
+                        discount = min(discount, coupon.maximum_discount)
+                else:
+                    discount = coupon.discount_value
+            else:
+                messages.warning(request, f'Minimum purchase of KSh {coupon.minimum_purchase} required for this coupon')
+                del request.session['coupon_code']
+                
+        except Coupon.DoesNotExist:
+            del request.session['coupon_code']
+    
+    # Calculate total
+    total = subtotal + delivery_fee - discount
+    
+    # Group cart items by vendor for shipment display
+    shipments = {}
+    for item in cart_items:
+        vendor_id = item.product.vendor_id
+        if vendor_id not in shipments:
+            shipments[vendor_id] = {
+                'vendor': item.product.vendor,
+                'items': []
+            }
+        shipments[vendor_id]['items'].append(item)
+    
+    context = {
+        'cart': cart,
+        'cart_items': cart_items,
+        'addresses': addresses,
+        'default_address': default_address,
+        'pickup_stations': pickup_stations,
+        'delivery_zones': delivery_zones,
+        'shipments': shipments.values(),
+        'subtotal': subtotal,
+        'delivery_fee': delivery_fee,
+        'discount': discount,
+        'total': total,
+        'delivery_method': delivery_method,
+        'coupon': coupon,
+    }
+    
+    return render(request, 'checkout.html', context)
+
+
+@login_required
+def update_delivery_method(request):
+    """Update delivery method and recalculate fees via AJAX"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            delivery_method = data.get('delivery_method')
+            station_id = data.get('station_id')
+            address_id = data.get('address_id')
+            
+            # Save to session
+            request.session['delivery_method'] = delivery_method
+            
+            # Get cart
+            cart = Cart.objects.get(user=request.user)
+            subtotal = cart.subtotal
+            
+            # Calculate delivery fee
+            if delivery_method == 'pickup_station':
+                if station_id:
+                    station = get_object_or_404(PickupStation, id=station_id, is_active=True)
+                    request.session['pickup_station_id'] = station_id
+                    # Pickup station fee (could vary by station)
+                    delivery_fee = Decimal('150.00')
+                else:
+                    delivery_fee = Decimal('150.00')
+            else:  # home_delivery
+                if address_id:
+                    address = get_object_or_404(Address, id=address_id, user=request.user)
+                    request.session['delivery_address_id'] = address_id
+                    
+                    # Get delivery zone for address
+                    delivery_zone = DeliveryZone.objects.filter(
+                        region=address.region,
+                        city=address.city,
+                        is_active=True
+                    ).first()
+                    
+                    delivery_fee = delivery_zone.delivery_fee if delivery_zone else Decimal('300.00')
+                else:
+                    delivery_fee = Decimal('300.00')
+            
+            # Get discount from session
+            discount = Decimal('0.00')
+            coupon_code = request.session.get('coupon_code')
+            if coupon_code:
+                try:
+                    coupon = Coupon.objects.get(
+                        code=coupon_code,
+                        is_active=True,
+                        valid_from__lte=timezone.now(),
+                        valid_to__gte=timezone.now()
+                    )
+                    if subtotal >= coupon.minimum_purchase:
+                        if coupon.discount_type == 'percentage':
+                            discount = (subtotal * coupon.discount_value) / 100
+                            if coupon.maximum_discount:
+                                discount = min(discount, coupon.maximum_discount)
+                        else:
+                            discount = coupon.discount_value
+                except Coupon.DoesNotExist:
+                    pass
+            
+            # Calculate total
+            total = subtotal + delivery_fee - discount
+            
+            return JsonResponse({
+                'success': True,
+                'subtotal': float(subtotal),
+                'delivery_fee': float(delivery_fee),
+                'discount': float(discount),
+                'total': float(total)
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'error': str(e)
+            }, status=400)
+    
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
+@login_required
+def apply_coupon(request):
+    """Apply coupon code"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            code = data.get('code', '').strip().upper()
+            
+            if not code:
+                return JsonResponse({
+                    'error': 'Please enter a coupon code'
+                }, status=400)
+            
+            # Get cart
+            cart = Cart.objects.get(user=request.user)
+            subtotal = cart.subtotal
+            
+            # Validate coupon
+            try:
+                coupon = Coupon.objects.get(
+                    code=code,
+                    is_active=True,
+                    valid_from__lte=timezone.now(),
+                    valid_to__gte=timezone.now()
+                )
+            except Coupon.DoesNotExist:
+                return JsonResponse({
+                    'error': 'Invalid or expired coupon code'
+                }, status=400)
+            
+            # Check usage limits
+            if coupon.usage_limit and coupon.usage_count >= coupon.usage_limit:
+                return JsonResponse({
+                    'error': 'This coupon has reached its usage limit'
+                }, status=400)
+            
+            # Check user usage
+            user_usage = Order.objects.filter(
+                user=request.user,
+                customer_note__contains=code
+            ).count()
+            
+            if user_usage >= coupon.user_limit:
+                return JsonResponse({
+                    'error': 'You have already used this coupon'
+                }, status=400)
+            
+            # Check minimum purchase
+            if subtotal < coupon.minimum_purchase:
+                return JsonResponse({
+                    'error': f'Minimum purchase of KSh {coupon.minimum_purchase} required'
+                }, status=400)
+            
+            # Calculate discount
+            if coupon.discount_type == 'percentage':
+                discount = (subtotal * coupon.discount_value) / 100
+                if coupon.maximum_discount:
+                    discount = min(discount, coupon.maximum_discount)
+            else:
+                discount = coupon.discount_value
+            
+            # Save to session
+            request.session['coupon_code'] = code
+            
+            # Recalculate total
+            delivery_method = request.session.get('delivery_method', 'pickup_station')
+            delivery_fee = Decimal('150.00') if delivery_method == 'pickup_station' else Decimal('300.00')
+            total = subtotal + delivery_fee - discount
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Coupon applied successfully',
+                'discount': float(discount),
+                'total': float(total)
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'error': str(e)
+            }, status=400)
+    
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
+@login_required
+def place_order(request):
+    """Place order and create payment"""
+    if request.method == 'POST':
+        try:
+            with transaction.atomic():
+                # Get cart
+                cart = Cart.objects.get(user=request.user)
+                cart_items = cart.items.select_related('product', 'variant').all()
+                
+                if not cart_items.exists():
+                    messages.error(request, 'Your cart is empty')
+                    return redirect('cart')
+                
+                # Get delivery details
+                delivery_method = request.session.get('delivery_method', 'pickup_station')
+                
+                delivery_address = None
+                pickup_station = None
+                
+                if delivery_method == 'home_delivery':
+                    address_id = request.session.get('delivery_address_id')
+                    if address_id:
+                        delivery_address = get_object_or_404(Address, id=address_id, user=request.user)
+                    else:
+                        messages.error(request, 'Please select a delivery address')
+                        return redirect('checkout')
+                else:
+                    station_id = request.session.get('pickup_station_id')
+                    if station_id:
+                        pickup_station = get_object_or_404(PickupStation, id=station_id, is_active=True)
+                    else:
+                        # Use first available station as default
+                        pickup_station = PickupStation.objects.filter(is_active=True).first()
+                
+                # Calculate amounts
+                subtotal = cart.subtotal
+                
+                if delivery_method == 'home_delivery' and delivery_address:
+                    delivery_zone = DeliveryZone.objects.filter(
+                        region=delivery_address.region,
+                        city=delivery_address.city,
+                        is_active=True
+                    ).first()
+                    delivery_fee = delivery_zone.delivery_fee if delivery_zone else Decimal('300.00')
+                else:
+                    delivery_fee = Decimal('150.00')
+                
+                # Apply discount
+                discount = Decimal('0.00')
+                coupon_code = request.session.get('coupon_code', '')
+                
+                if coupon_code:
+                    try:
+                        coupon = Coupon.objects.get(
+                            code=coupon_code,
+                            is_active=True,
+                            valid_from__lte=timezone.now(),
+                            valid_to__gte=timezone.now()
+                        )
+                        if subtotal >= coupon.minimum_purchase:
+                            if coupon.discount_type == 'percentage':
+                                discount = (subtotal * coupon.discount_value) / 100
+                                if coupon.maximum_discount:
+                                    discount = min(discount, coupon.maximum_discount)
+                            else:
+                                discount = coupon.discount_value
+                            
+                            # Increment usage count
+                            coupon.usage_count += 1
+                            coupon.save()
+                    except Coupon.DoesNotExist:
+                        pass
+                
+                total = subtotal + delivery_fee - discount
+                
+                # Create order
+                order = Order.objects.create(
+                    user=request.user,
+                    status='pending',
+                    delivery_method=delivery_method,
+                    delivery_address=delivery_address,
+                    pickup_station=pickup_station,
+                    subtotal=subtotal,
+                    delivery_fee=delivery_fee,
+                    discount=discount,
+                    total=total,
+                    customer_note=f'Coupon: {coupon_code}' if coupon_code else ''
+                )
+                
+                # Create order items and update stock
+                for cart_item in cart_items:
+                    # Check stock
+                    if cart_item.product.stock < cart_item.quantity:
+                        raise Exception(f'Insufficient stock for {cart_item.product.name}')
+                    
+                    # Create order item
+                    OrderItem.objects.create(
+                        order=order,
+                        product=cart_item.product,
+                        variant=cart_item.variant,
+                        vendor=cart_item.product.vendor,
+                        product_name=cart_item.product.name,
+                        product_sku=cart_item.product.sku,
+                        variant_name=cart_item.variant.name if cart_item.variant else '',
+                        quantity=cart_item.quantity,
+                        price=cart_item.price,
+                        total=cart_item.total_price
+                    )
+                    
+                    # Update stock
+                    cart_item.product.stock -= cart_item.quantity
+                    cart_item.product.total_sales += cart_item.quantity
+                    cart_item.product.save()
+                
+                # Get payment method
+                payment_method = request.POST.get('payment_method', 'mpesa')
+                
+                # Create payment
+                payment = Payment.objects.create(
+                    order=order,
+                    payment_method=payment_method,
+                    amount=total,
+                    status='pending'
+                )
+                
+                # Clear cart
+                cart.items.all().delete()
+                
+                # Clear session data
+                if 'coupon_code' in request.session:
+                    del request.session['coupon_code']
+                if 'delivery_method' in request.session:
+                    del request.session['delivery_method']
+                if 'pickup_station_id' in request.session:
+                    del request.session['pickup_station_id']
+                if 'delivery_address_id' in request.session:
+                    del request.session['delivery_address_id']
+                
+                messages.success(request, f'Order {order.order_number} placed successfully!')
+                
+                # Redirect to payment page
+                return redirect('payment', order_id=order.id)
+                
+        except Exception as e:
+            messages.error(request, str(e))
+            return redirect('checkout')
+    
+    return redirect('checkout')

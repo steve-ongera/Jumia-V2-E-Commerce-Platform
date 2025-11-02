@@ -29,5 +29,11 @@ urlpatterns = [
     path('cart/remove/<int:item_id>/', views.remove_cart_item, name='remove_cart_item'),
     path('cart/clear/', views.clear_cart, name='clear_cart'),
 
+    # Checkout
+    path('checkout/', views.checkout, name='checkout'),
+    path('checkout/update-delivery/', views.update_delivery_method, name='update_delivery_method'),
+    path('checkout/apply-coupon/', views.apply_coupon, name='apply_coupon'),
+    path('checkout/place-order/', views.place_order, name='place_order'),
+
 
 ]
