@@ -2278,3 +2278,261 @@ def place_order(request):
             return redirect('checkout')
     
     return redirect('checkout')
+
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.http import JsonResponse
+from django.utils import timezone
+from .models import Order, OrderItem, Payment, Review
+from decimal import Decimal
+
+
+@login_required
+def order_detail(request, order_id):
+    """Order detail page"""
+    
+    # Get order with related data
+    order = get_object_or_404(
+        Order.objects.select_related(
+            'user',
+            'delivery_address',
+            'pickup_station'
+        ).prefetch_related(
+            'items__product__images',
+            'items__product__brand',
+            'items__vendor',
+            'payments'
+        ),
+        id=order_id,
+        user=request.user
+    )
+    
+    # Get order items grouped by vendor
+    items_by_vendor = {}
+    for item in order.items.all():
+        vendor_id = item.vendor_id
+        if vendor_id not in items_by_vendor:
+            items_by_vendor[vendor_id] = {
+                'vendor': item.vendor,
+                'items': []
+            }
+        items_by_vendor[vendor_id]['items'].append(item)
+    
+    # Get payment information
+    payment = order.payments.first()
+    
+    # Order status timeline
+    status_timeline = [
+        {
+            'status': 'pending',
+            'label': 'Order Placed',
+            'date': order.created_at,
+            'completed': True
+        },
+        {
+            'status': 'confirmed',
+            'label': 'Order Confirmed',
+            'date': order.confirmed_at,
+            'completed': order.confirmed_at is not None
+        },
+        {
+            'status': 'processing',
+            'label': 'Processing',
+            'date': None,
+            'completed': order.status in ['processing', 'shipped', 'delivered']
+        },
+        {
+            'status': 'shipped',
+            'label': 'Shipped',
+            'date': order.shipped_at,
+            'completed': order.shipped_at is not None
+        },
+        {
+            'status': 'delivered',
+            'label': 'Delivered',
+            'date': order.delivered_at,
+            'completed': order.delivered_at is not None
+        }
+    ]
+    
+    # Check if order is cancelled or returned
+    if order.status in ['cancelled', 'returned', 'refunded']:
+        status_timeline = [
+            {
+                'status': order.status,
+                'label': order.get_status_display(),
+                'date': order.updated_at,
+                'completed': True
+            }
+        ]
+    
+    # Estimated delivery date
+    estimated_delivery = None
+    if order.delivery_method == 'pickup_station' and order.pickup_station:
+        # Add 3-5 days for pickup
+        from datetime import timedelta
+        estimated_delivery = order.created_at + timedelta(days=5)
+    elif order.delivery_address:
+        # Check delivery zone for estimated days
+        from .models import DeliveryZone
+        delivery_zone = DeliveryZone.objects.filter(
+            region=order.delivery_address.region,
+            city=order.delivery_address.city,
+            is_active=True
+        ).first()
+        if delivery_zone:
+            from datetime import timedelta
+            estimated_delivery = order.created_at + timedelta(days=delivery_zone.estimated_days)
+    
+    # Check which products can be reviewed
+    reviewable_items = []
+    if order.status == 'delivered':
+        for item in order.items.all():
+            # Check if user has already reviewed this product
+            has_reviewed = Review.objects.filter(
+                product=item.product,
+                user=request.user
+            ).exists()
+            
+            if not has_reviewed:
+                reviewable_items.append(item.product.id)
+    
+    context = {
+        'order': order,
+        'items_by_vendor': items_by_vendor.values(),
+        'payment': payment,
+        'status_timeline': status_timeline,
+        'estimated_delivery': estimated_delivery,
+        'reviewable_items': reviewable_items,
+    }
+    
+    return render(request, 'order_detail.html', context)
+
+
+@login_required
+def order_list(request):
+    """User's order list"""
+    
+    # Get filter parameters
+    status_filter = request.GET.get('status', 'all')
+    
+    # Base queryset
+    orders = Order.objects.filter(
+        user=request.user
+    ).select_related(
+        'delivery_address',
+        'pickup_station'
+    ).prefetch_related(
+        'items__product__images'
+    ).order_by('-created_at')
+    
+    # Apply status filter
+    if status_filter != 'all':
+        orders = orders.filter(status=status_filter)
+    
+    # Get order counts by status
+    from django.db.models import Count, Q
+    status_counts = {
+        'all': Order.objects.filter(user=request.user).count(),
+        'pending': Order.objects.filter(user=request.user, status='pending').count(),
+        'confirmed': Order.objects.filter(user=request.user, status='confirmed').count(),
+        'shipped': Order.objects.filter(user=request.user, status='shipped').count(),
+        'delivered': Order.objects.filter(user=request.user, status='delivered').count(),
+        'cancelled': Order.objects.filter(user=request.user, status='cancelled').count(),
+    }
+    
+    context = {
+        'orders': orders,
+        'status_filter': status_filter,
+        'status_counts': status_counts,
+    }
+    
+    return render(request, 'order_list.html', context)
+
+
+@login_required
+def cancel_order(request, order_id):
+    """Cancel an order"""
+    if request.method == 'POST':
+        try:
+            order = get_object_or_404(
+                Order.objects.select_related('user').prefetch_related('items__product'),
+                id=order_id,
+                user=request.user
+            )
+            
+            # Check if order can be cancelled
+            if order.status not in ['pending', 'confirmed']:
+                messages.error(request, 'This order cannot be cancelled')
+                return redirect('order_detail', order_id=order.id)
+            
+            # Cancel order
+            order.status = 'cancelled'
+            order.save()
+            
+            # Restore stock
+            for item in order.items.all():
+                item.product.stock += item.quantity
+                item.product.total_sales -= item.quantity
+                item.product.save()
+            
+            # Update payment status
+            payment = order.payments.first()
+            if payment and payment.status == 'completed':
+                payment.status = 'refunded'
+                payment.save()
+            
+            messages.success(request, f'Order {order.order_number} has been cancelled')
+            return redirect('order_detail', order_id=order.id)
+            
+        except Exception as e:
+            messages.error(request, str(e))
+            return redirect('order_detail', order_id=order_id)
+    
+    return redirect('order_list')
+
+
+@login_required
+def download_invoice(request, order_id):
+    """Download order invoice as PDF"""
+    order = get_object_or_404(
+        Order.objects.select_related('user', 'delivery_address').prefetch_related('items'),
+        id=order_id,
+        user=request.user
+    )
+    
+    # You can implement PDF generation here using libraries like:
+    # - reportlab
+    # - weasyprint
+    # - xhtml2pdf
+    
+    # For now, return a simple response
+    messages.info(request, 'Invoice download feature coming soon')
+    return redirect('order_detail', order_id=order.id)
+
+
+@login_required
+def track_order(request, order_id):
+    """Track order status"""
+    order = get_object_or_404(
+        Order.objects.select_related('user'),
+        id=order_id,
+        user=request.user
+    )
+    
+    # Return tracking information as JSON for AJAX requests
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({
+            'order_number': order.order_number,
+            'status': order.status,
+            'status_display': order.get_status_display(),
+            'tracking_number': order.tracking_number,
+            'created_at': order.created_at.isoformat(),
+            'confirmed_at': order.confirmed_at.isoformat() if order.confirmed_at else None,
+            'shipped_at': order.shipped_at.isoformat() if order.shipped_at else None,
+            'delivered_at': order.delivered_at.isoformat() if order.delivered_at else None,
+        })
+    
+    return redirect('order_detail', order_id=order.id)
