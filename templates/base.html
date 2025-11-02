@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Jumia Kenya - Online Shopping{% endblock %}</title>
+    
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
+    <!-- Custom CSS -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-size: 13px;
+            line-height: 1.5;
+            color: #282828;
+            background-color: #f5f5f5;
+        }
+        
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        /* Top Header - Black Bar */
+        .top-header {
+            background-color: #313133;
+            color: #fff;
+            padding: 8px 0;
+            font-size: 11px;
+        }
+        
+        .top-header .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .top-header a {
+            color: #fff;
+            margin-left: 20px;
+            transition: opacity 0.2s;
+        }
+        
+        .top-header a:hover {
+            opacity: 0.8;
+        }
+        
+        .top-header i {
+            margin-right: 5px;
+            font-size: 12px;
+        }
+        
+        /* Main Header */
+        .main-header {
+            background-color: #fff;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 12px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        .main-header .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 15px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #f68b1e;
+            display: flex;
+            align-items: center;
+        }
+        
+        .logo img {
+            height: 35px;
+        }
+        
+        /* Search Bar */
+        .search-container {
+            flex: 1;
+            max-width: 600px;
+        }
+        
+        .search-form {
+            display: flex;
+            border: 1px solid #f68b1e;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .search-form input {
+            flex: 1;
+            border: none;
+            padding: 10px 15px;
+            font-size: 13px;
+            outline: none;
+        }
+        
+        .search-form button {
+            background-color: #f68b1e;
+            color: #fff;
+            border: none;
+            padding: 10px 25px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        
+        .search-form button:hover {
+            background-color: #e67e0f;
+        }
+        
+        /* Header Actions */
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .header-action {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            transition: color 0.2s;
+            position: relative;
+        }
+        
+        .header-action:hover {
+            color: #f68b1e;
+        }
+        
+        .header-action i {
+            font-size: 20px;
+        }
+        
+        .header-action span {
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .cart-badge {
+            position: absolute;
+            top: -5px;
+            right: -8px;
+            background-color: #f68b1e;
+            color: #fff;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        
+        /* Mobile Menu Toggle */
+        .mobile-menu-toggle {
+            display: none;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        
+        /* Navigation */
+        .navigation {
+            background-color: #fff;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 0;
+        }
+        
+        .navigation .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+        
+        .nav-menu {
+            display: flex;
+            list-style: none;
+            gap: 0;
+        }
+        
+        .nav-menu li {
+            position: relative;
+        }
+        
+        .nav-menu a {
+            display: block;
+            padding: 12px 15px;
+            font-size: 12px;
+            font-weight: 500;
+            color: #282828;
+            transition: background-color 0.2s;
+        }
+        
+        .nav-menu a:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .nav-menu i {
+            margin-right: 5px;
+            font-size: 14px;
+        }
+        
+        /* Dropdown */
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background-color: #fff;
+            border: 1px solid #e0e0e0;
+            border-top: none;
+            min-width: 200px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        
+        .nav-menu li:hover .dropdown-menu {
+            display: block;
+        }
+        
+        .dropdown-menu a {
+            border-bottom: 1px solid #f5f5f5;
+            padding: 10px 15px;
+        }
+        
+        .dropdown-menu a:last-child {
+            border-bottom: none;
+        }
+        
+        /* Mobile Sidebar */
+        .mobile-sidebar {
+            position: fixed;
+            top: 0;
+            left: -280px;
+            width: 280px;
+            height: 100vh;
+            background-color: #fff;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.1);
+            transition: left 0.3s;
+            z-index: 2000;
+            overflow-y: auto;
+        }
+        
+        .mobile-sidebar.active {
+            left: 0;
+        }
+        
+        .sidebar-header {
+            background-color: #f68b1e;
+            color: #fff;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .sidebar-close {
+            font-size: 24px;
+            cursor: pointer;
+        }
+        
+        .sidebar-menu {
+            list-style: none;
+        }
+        
+        .sidebar-menu a {
+            display: block;
+            padding: 12px 15px;
+            border-bottom: 1px solid #f5f5f5;
+            font-size: 13px;
+        }
+        
+        .sidebar-menu i {
+            margin-right: 10px;
+            width: 20px;
+        }
+        
+        .mobile-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1999;
+        }
+        
+        .mobile-overlay.active {
+            display: block;
+        }
+        
+        /* Main Content */
+        .main-content {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 0 15px;
+        }
+        
+        /* Footer */
+        .footer {
+            background-color: #313133;
+            color: #fff;
+            padding: 40px 0 20px;
+            margin-top: 40px;
+            font-size: 12px;
+        }
+        
+        .footer .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+        
+        .footer-sections {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .footer-section h4 {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #f68b1e;
+        }
+        
+        .footer-section ul {
+            list-style: none;
+        }
+        
+        .footer-section ul li {
+            margin-bottom: 8px;
+        }
+        
+        .footer-section a {
+            color: #ccc;
+            transition: color 0.2s;
+        }
+        
+        .footer-section a:hover {
+            color: #f68b1e;
+        }
+        
+        .footer-bottom {
+            border-top: 1px solid #444;
+            padding-top: 20px;
+            text-align: center;
+            color: #999;
+        }
+        
+        .social-links {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .social-links a {
+            color: #fff;
+            font-size: 18px;
+            transition: color 0.2s;
+        }
+        
+        .social-links a:hover {
+            color: #f68b1e;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .top-header {
+                display: none;
+            }
+            
+            .main-header .container {
+                gap: 10px;
+            }
+            
+            .mobile-menu-toggle {
+                display: block;
+            }
+            
+            .search-container {
+                max-width: none;
+            }
+            
+            .header-actions span {
+                display: none;
+            }
+            
+            .header-actions {
+                gap: 15px;
+            }
+            
+            .navigation {
+                display: none;
+            }
+            
+            .footer-sections {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .logo img {
+                height: 28px;
+            }
+            
+            .search-form input {
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+            
+            .search-form button {
+                padding: 8px 15px;
+            }
+            
+            .header-action i {
+                font-size: 18px;
+            }
+            
+            .footer-sections {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Utility Classes */
+        .btn-primary {
+            background-color: #f68b1e;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        
+        .btn-primary:hover {
+            background-color: #e67e0f;
+        }
+        
+        .container-fluid {
+            width: 100%;
+            padding: 0 15px;
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Top Header -->
+    <div class="top-header">
+        <div class="container">
+            <div class="left">
+                <a href="#"><i class="bi bi-star"></i>Sell on Jumia</a>
+            </div>
+            <div class="right">
+                <a href="#"><i class="bi bi-question-circle"></i>Help</a>
+                <a href="#"><i class="bi bi-telephone"></i>0757790687</a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Header -->
+    <div class="main-header">
+        <div class="container">
+            <div class="mobile-menu-toggle" onclick="toggleMobileSidebar()">
+                <i class="bi bi-list"></i>
+            </div>
+            
+            <a href="/" class="logo">
+                <span style="font-size: 28px; font-weight: 900;">JUMIA</span>
+                <span style="font-size: 10px; background: #f68b1e; color: #fff; padding: 2px 4px; border-radius: 3px; margin-left: 3px;">V2</span>
+            </a>
+            
+            <div class="search-container">
+                <form class="search-form" method="GET" action="{% url 'search' %}">
+                    <input type="text" name="q" placeholder="Search products, brands and categories" value="{{ request.GET.q }}">
+                    <button type="submit">
+                        <i class="bi bi-search"></i> SEARCH
+                    </button>
+                </form>
+            </div>
+            
+            <div class="header-actions">
+                <a href="{% url 'account' %}" class="header-action">
+                    <i class="bi bi-person"></i>
+                    <span>Account</span>
+                </a>
+                
+                <a href="{% url 'wishlist' %}" class="header-action">
+                    <i class="bi bi-heart"></i>
+                    <span>Wishlist</span>
+                </a>
+                
+                <a href="{% url 'cart' %}" class="header-action">
+                    <i class="bi bi-cart3"></i>
+                    <span>Cart</span>
+                    {% if cart_item_count > 0 %}
+                    <span class="cart-badge">{{ cart_item_count }}</span>
+                    {% endif %}
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Navigation -->
+    <nav class="navigation">
+        <div class="container">
+            <ul class="nav-menu">
+                <li>
+                    <a href="#"><i class="bi bi-grid-3x3-gap"></i>All Categories</a>
+                    <div class="dropdown-menu">
+                        {% for category in categories %}
+                        <a href="{% url 'category' category.slug %}">{{ category.name }}</a>
+                        {% endfor %}
+                    </div>
+                </li>
+                <li><a href="{% url 'phones' %}"><i class="bi bi-phone"></i>Phones & Tablets</a></li>
+                <li><a href="{% url 'electronics' %}"><i class="bi bi-laptop"></i>Electronics</a></li>
+                <li><a href="{% url 'computing' %}"><i class="bi bi-pc-display"></i>Computing</a></li>
+                <li><a href="{% url 'fashion' %}"><i class="bi bi-bag"></i>Fashion</a></li>
+                <li><a href="{% url 'home' %}"><i class="bi bi-house"></i>Home & Kitchen</a></li>
+                <li><a href="{% url 'health' %}"><i class="bi bi-heart-pulse"></i>Health & Beauty</a></li>
+                <li><a href="{% url 'sports' %}"><i class="bi bi-bicycle"></i>Sports</a></li>
+            </ul>
+        </div>
+    </nav>
+    
+    <!-- Mobile Sidebar -->
+    <div class="mobile-sidebar" id="mobileSidebar">
+        <div class="sidebar-header">
+            <div>
+                <strong>Menu</strong>
+            </div>
+            <div class="sidebar-close" onclick="toggleMobileSidebar()">
+                <i class="bi bi-x"></i>
+            </div>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="{% url 'account' %}"><i class="bi bi-person"></i>My Account</a></li>
+            <li><a href="{% url 'orders' %}"><i class="bi bi-box-seam"></i>Orders</a></li>
+            <li><a href="{% url 'wishlist' %}"><i class="bi bi-heart"></i>Saved Items</a></li>
+            <li style="border-bottom: 2px solid #f5f5f5; margin: 10px 0;"></li>
+            {% for category in categories %}
+            <li><a href="{% url 'category' category.slug %}">{{ category.name }}</a></li>
+            {% endfor %}
+            <li style="border-bottom: 2px solid #f5f5f5; margin: 10px 0;"></li>
+            <li><a href="#"><i class="bi bi-question-circle"></i>Help Center</a></li>
+            <li><a href="#"><i class="bi bi-telephone"></i>Contact Us</a></li>
+        </ul>
+    </div>
+    
+    <div class="mobile-overlay" id="mobileOverlay" onclick="toggleMobileSidebar()"></div>
+    
+    <!-- Main Content -->
+    <div class="main-content">
+        {% block content %}{% endblock %}
+    </div>
+    
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-sections">
+                <div class="footer-section">
+                    <h4>LET US HELP YOU</h4>
+                    <ul>
+                        <li><a href="#">Help Center</a></li>
+                        <li><a href="#">How to shop on Jumia?</a></li>
+                        <li><a href="#">Delivery options and timelines</a></li>
+                        <li><a href="#">How to return a product on Jumia?</a></li>
+                        <li><a href="#">Corporate and bulk purchases</a></li>
+                        <li><a href="#">Report a Product</a></li>
+                        <li><a href="#">Ship your package anywhere in Kenya</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>ABOUT JUMIA</h4>
+                    <ul>
+                        <li><a href="#">About us</a></li>
+                        <li><a href="#">Jumia careers</a></li>
+                        <li><a href="#">Jumia Express</a></li>
+                        <li><a href="#">Terms and Conditions</a></li>
+                        <li><a href="#">Privacy Notice</a></li>
+                        <li><a href="#">Store Credit Terms & Conditions</a></li>
+                        <li><a href="#">Cookie Notice</a></li>
+                        <li><a href="#">Flash Sales</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>MAKE MONEY WITH JUMIA</h4>
+                    <ul>
+                        <li><a href="#">Sell on Jumia</a></li>
+                        <li><a href="#">Vendor hub</a></li>
+                        <li><a href="#">Become a Sales Consultant</a></li>
+                        <li><a href="#">Join the Jumia KOL Program</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>JUMIA INTERNATIONAL</h4>
+                    <ul>
+                        <li><a href="#">Algeria</a></li>
+                        <li><a href="#">Egypt</a></li>
+                        <li><a href="#">Ghana</a></li>
+                        <li><a href="#">Ivory Coast</a></li>
+                        <li><a href="#">Morocco</a></li>
+                        <li><a href="#">Nigeria</a></li>
+                        <li><a href="#">Senegal</a></li>
+                        <li><a href="#">Tunisia</a></li>
+                        <li><a href="#">Uganda</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="footer-section">
+                <h4>PAYMENT METHODS & DELIVERY PARTNERS</h4>
+                <div style="margin-top: 10px; color: #999;">
+                    <span style="margin-right: 15px;"><i class="bi bi-credit-card"></i> Card</span>
+                    <span style="margin-right: 15px;"><i class="bi bi-phone"></i> M-Pesa</span>
+                    <span><i class="bi bi-cash"></i> Cash on Delivery</span>
+                </div>
+                
+                <div class="social-links">
+                    <a href="#"><i class="bi bi-facebook"></i></a>
+                    <a href="#"><i class="bi bi-twitter"></i></a>
+                    <a href="#"><i class="bi bi-instagram"></i></a>
+                    <a href="#"><i class="bi bi-youtube"></i></a>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>&copy; 2024 Jumia Kenya V2 | Developed by Steve Ongera</p>
+                <p style="margin-top: 5px; font-size: 11px;">
+                    <a href="tel:0757790687" style="color: #f68b1e;">0757790687</a> | 
+                    <a href="mailto:steveongera001@gmail.com" style="color: #f68b1e;">steveongera001@gmail.com</a>
+                </p>
+            </div>
+        </div>
+    </footer>
+    
+    <script>
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('mobileSidebar');
+            const overlay = document.getElementById('mobileOverlay');
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+        }
+        
+        // Close sidebar when clicking outside
+        document.addEventListener('click', function(event) {
+            const sidebar = document.getElementById('mobileSidebar');
+            const toggle = document.querySelector('.mobile-menu-toggle');
+            
+            if (!sidebar.contains(event.target) && !toggle.contains(event.target)) {
+                sidebar.classList.remove('active');
+                document.getElementById('mobileOverlay').classList.remove('active');
+            }
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
