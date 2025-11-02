@@ -35,5 +35,12 @@ urlpatterns = [
     path('checkout/apply-coupon/', views.apply_coupon, name='apply_coupon'),
     path('checkout/place-order/', views.place_order, name='place_order'),
 
-
+    # Payment
+    path('payment/<int:order_id>/', views.payment_page, name='payment_page'),
+    path('payment/mpesa/initiate/<int:payment_id>/', views.initiate_mpesa_payment, name='initiate_mpesa_payment'),
+    path('payment/mpesa/callback/', views.mpesa_callback, name='mpesa_callback'),
+    path('payment/status/<int:payment_id>/', views.check_payment_status, name='check_payment_status'),
+    path('payment/success/<int:order_id>/', views.payment_success, name='payment_success'),
+    path('payment/failed/<int:order_id>/', views.payment_failed, name='payment_failed'),
+    
 ]

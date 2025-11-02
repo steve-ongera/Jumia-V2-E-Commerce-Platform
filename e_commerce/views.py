@@ -1787,6 +1787,494 @@ def place_order(request):
                 
         except Exception as e:
             messages.error(request, str(e))
+            return redirect('payment', order_id=order.id)
+
+    
+    return redirect('checkout')
+
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.db import transaction
+from django.utils import timezone
+from django.conf import settings
+from .models import Order, Payment
+import requests
+import base64
+import json
+from datetime import datetime
+
+
+@login_required
+def payment_page(request, order_id):
+    """Payment page for order"""
+    
+    order = get_object_or_404(
+        Order.objects.select_related(
+            'user',
+            'delivery_address',
+            'pickup_station'
+        ).prefetch_related('items__product'),
+        id=order_id,
+        user=request.user
+    )
+    
+    # Get or create payment
+    payment = order.payments.first()
+    if not payment:
+        payment = Payment.objects.create(
+            order=order,
+            payment_method='mpesa',
+            amount=order.total,
+            status='pending'
+        )
+    
+    context = {
+        'order': order,
+        'payment': payment,
+    }
+    
+    return render(request, 'payment.html', context)
+
+
+@login_required
+def initiate_mpesa_payment(request, payment_id):
+    """Initiate M-Pesa STK Push"""
+    if request.method == 'POST':
+        try:
+            payment = get_object_or_404(
+                Payment.objects.select_related('order'),
+                id=payment_id,
+                order__user=request.user
+            )
+            
+            if payment.status == 'completed':
+                return JsonResponse({
+                    'error': 'Payment already completed'
+                }, status=400)
+            
+            # Get phone number from request
+            phone_number = request.POST.get('phone_number', '').strip()
+            
+            if not phone_number:
+                return JsonResponse({
+                    'error': 'Phone number is required'
+                }, status=400)
+            
+            # Format phone number (remove + and spaces, ensure starts with 254)
+            phone_number = phone_number.replace('+', '').replace(' ', '')
+            if phone_number.startswith('0'):
+                phone_number = '254' + phone_number[1:]
+            elif not phone_number.startswith('254'):
+                phone_number = '254' + phone_number
+            
+            # Validate phone number
+            if not phone_number.isdigit() or len(phone_number) != 12:
+                return JsonResponse({
+                    'error': 'Invalid phone number format. Use 07XXXXXXXX or 2547XXXXXXXX'
+                }, status=400)
+            
+            # Get M-Pesa access token
+            access_token = get_mpesa_access_token()
+            
+            if not access_token:
+                return JsonResponse({
+                    'error': 'Failed to authenticate with M-Pesa'
+                }, status=500)
+            
+            # Prepare STK Push request
+            timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+            business_short_code = settings.MPESA_SHORTCODE
+            passkey = settings.MPESA_PASSKEY
+            
+            # Generate password
+            password = base64.b64encode(
+                (business_short_code + passkey + timestamp).encode()
+            ).decode('utf-8')
+            
+            # Prepare request payload
+            stk_push_url = settings.MPESA_STK_PUSH_URL
+            callback_url = settings.MPESA_CALLBACK_URL
+            
+            payload = {
+                "BusinessShortCode": business_short_code,
+                "Password": password,
+                "Timestamp": timestamp,
+                "TransactionType": "CustomerPayBillOnline",
+                "Amount": int(payment.amount),
+                "PartyA": phone_number,
+                "PartyB": business_short_code,
+                "PhoneNumber": phone_number,
+                "CallBackURL": callback_url,
+                "AccountReference": payment.order.order_number,
+                "TransactionDesc": f"Payment for Order {payment.order.order_number}"
+            }
+            
+            headers = {
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json"
+            }
+            
+            # Make STK Push request
+            response = requests.post(stk_push_url, json=payload, headers=headers)
+            response_data = response.json()
+            
+            if response.status_code == 200 and response_data.get('ResponseCode') == '0':
+                # Update payment with checkout request ID
+                payment.status = 'processing'
+                payment.mpesa_phone = phone_number
+                payment.response_data = response_data
+                payment.save()
+                
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Payment request sent. Please check your phone.',
+                    'checkout_request_id': response_data.get('CheckoutRequestID')
+                })
+            else:
+                # Log error
+                error_message = response_data.get('errorMessage', 'Failed to initiate payment')
+                payment.status = 'failed'
+                payment.failure_reason = error_message
+                payment.response_data = response_data
+                payment.save()
+                
+                return JsonResponse({
+                    'error': error_message
+                }, status=400)
+                
+        except Exception as e:
+            return JsonResponse({
+                'error': str(e)
+            }, status=500)
+    
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
+def get_mpesa_access_token():
+    """Get M-Pesa OAuth access token"""
+    try:
+        consumer_key = settings.MPESA_CONSUMER_KEY
+        consumer_secret = settings.MPESA_CONSUMER_SECRET
+        auth_url = settings.MPESA_AUTH_URL
+        
+        # Encode credentials
+        credentials = base64.b64encode(
+            f"{consumer_key}:{consumer_secret}".encode()
+        ).decode('utf-8')
+        
+        headers = {
+            "Authorization": f"Basic {credentials}"
+        }
+        
+        response = requests.get(auth_url, headers=headers)
+        
+        if response.status_code == 200:
+            return response.json().get('access_token')
+        
+        return None
+        
+    except Exception as e:
+        print(f"Error getting access token: {e}")
+        return None
+
+
+@login_required
+def check_payment_status(request, payment_id):
+    """Check M-Pesa payment status"""
+    try:
+        payment = get_object_or_404(
+            Payment.objects.select_related('order'),
+            id=payment_id,
+            order__user=request.user
+        )
+        
+        return JsonResponse({
+            'status': payment.status,
+            'payment_method': payment.payment_method,
+            'amount': float(payment.amount),
+            'transaction_id': payment.transaction_id,
+            'mpesa_receipt': payment.mpesa_receipt,
+            'order_number': payment.order.order_number,
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'error': str(e)
+        }, status=400)
+
+
+@csrf_exempt
+def mpesa_callback(request):
+    """M-Pesa callback endpoint"""
+    try:
+        # Get callback data
+        callback_data = json.loads(request.body)
+        
+        # Extract data from callback
+        body = callback_data.get('Body', {})
+        stk_callback = body.get('stkCallback', {})
+        
+        result_code = stk_callback.get('ResultCode')
+        result_desc = stk_callback.get('ResultDesc')
+        checkout_request_id = stk_callback.get('CheckoutRequestID')
+        
+        # Find payment by checkout request ID
+        payment = Payment.objects.filter(
+            response_data__CheckoutRequestID=checkout_request_id
+        ).first()
+        
+        if not payment:
+            return JsonResponse({
+                'ResultCode': 1,
+                'ResultDesc': 'Payment not found'
+            })
+        
+        # Update payment based on result
+        if result_code == 0:
+            # Payment successful
+            callback_metadata = stk_callback.get('CallbackMetadata', {})
+            items = callback_metadata.get('Item', [])
+            
+            # Extract transaction details
+            mpesa_receipt = None
+            amount = None
+            phone = None
+            transaction_date = None
+            
+            for item in items:
+                name = item.get('Name')
+                value = item.get('Value')
+                
+                if name == 'MpesaReceiptNumber':
+                    mpesa_receipt = value
+                elif name == 'Amount':
+                    amount = value
+                elif name == 'PhoneNumber':
+                    phone = value
+                elif name == 'TransactionDate':
+                    transaction_date = value
+            
+            # Update payment
+            payment.status = 'completed'
+            payment.mpesa_receipt = mpesa_receipt
+            payment.completed_at = timezone.now()
+            payment.response_data = callback_data
+            payment.save()
+            
+            # Update order
+            order = payment.order
+            order.status = 'confirmed'
+            order.confirmed_at = timezone.now()
+            order.save()
+            
+        else:
+            # Payment failed
+            payment.status = 'failed'
+            payment.failure_reason = result_desc
+            payment.response_data = callback_data
+            payment.save()
+        
+        return JsonResponse({
+            'ResultCode': 0,
+            'ResultDesc': 'Success'
+        })
+        
+    except Exception as e:
+        print(f"Callback error: {e}")
+        return JsonResponse({
+            'ResultCode': 1,
+            'ResultDesc': str(e)
+        })
+
+
+@login_required
+def payment_success(request, order_id):
+    """Payment success page"""
+    order = get_object_or_404(
+        Order.objects.select_related('user').prefetch_related('items'),
+        id=order_id,
+        user=request.user
+    )
+    
+    payment = order.payments.filter(status='completed').first()
+    
+    context = {
+        'order': order,
+        'payment': payment,
+    }
+    
+    return render(request, 'payment_success.html', context)
+
+
+@login_required
+def payment_failed(request, order_id):
+    """Payment failed page"""
+    order = get_object_or_404(
+        Order.objects.select_related('user'),
+        id=order_id,
+        user=request.user
+    )
+    
+    payment = order.payments.first()
+    
+    context = {
+        'order': order,
+        'payment': payment,
+    }
+    
+    return render(request, 'payment_failed.html', context)
+
+
+@login_required
+def place_order(request):
+    """Place order and create payment (Updated version)"""
+    if request.method == 'POST':
+        try:
+            with transaction.atomic():
+                # Get cart
+                cart = Cart.objects.get(user=request.user)
+                cart_items = cart.items.select_related('product', 'variant').all()
+                
+                if not cart_items.exists():
+                    messages.error(request, 'Your cart is empty')
+                    return redirect('cart')
+                
+                # Get delivery details
+                delivery_method = request.session.get('delivery_method', 'pickup_station')
+                
+                delivery_address = None
+                pickup_station = None
+                
+                if delivery_method == 'home_delivery':
+                    address_id = request.session.get('delivery_address_id')
+                    if address_id:
+                        delivery_address = get_object_or_404(Address, id=address_id, user=request.user)
+                    else:
+                        messages.error(request, 'Please select a delivery address')
+                        return redirect('checkout')
+                else:
+                    station_id = request.session.get('pickup_station_id')
+                    if station_id:
+                        pickup_station = get_object_or_404(PickupStation, id=station_id, is_active=True)
+                    else:
+                        # Use first available station as default
+                        pickup_station = PickupStation.objects.filter(is_active=True).first()
+                
+                # Calculate amounts
+                subtotal = cart.subtotal
+                
+                if delivery_method == 'home_delivery' and delivery_address:
+                    delivery_zone = DeliveryZone.objects.filter(
+                        region=delivery_address.region,
+                        city=delivery_address.city,
+                        is_active=True
+                    ).first()
+                    delivery_fee = delivery_zone.delivery_fee if delivery_zone else Decimal('300.00')
+                else:
+                    delivery_fee = Decimal('150.00')
+                
+                # Apply discount
+                discount = Decimal('0.00')
+                coupon_code = request.session.get('coupon_code', '')
+                
+                if coupon_code:
+                    try:
+                        coupon = Coupon.objects.get(
+                            code=coupon_code,
+                            is_active=True,
+                            valid_from__lte=timezone.now(),
+                            valid_to__gte=timezone.now()
+                        )
+                        if subtotal >= coupon.minimum_purchase:
+                            if coupon.discount_type == 'percentage':
+                                discount = (subtotal * coupon.discount_value) / 100
+                                if coupon.maximum_discount:
+                                    discount = min(discount, coupon.maximum_discount)
+                            else:
+                                discount = coupon.discount_value
+                            
+                            # Increment usage count
+                            coupon.usage_count += 1
+                            coupon.save()
+                    except Coupon.DoesNotExist:
+                        pass
+                
+                total = subtotal + delivery_fee - discount
+                
+                # Create order
+                order = Order.objects.create(
+                    user=request.user,
+                    status='pending',
+                    delivery_method=delivery_method,
+                    delivery_address=delivery_address,
+                    pickup_station=pickup_station,
+                    subtotal=subtotal,
+                    delivery_fee=delivery_fee,
+                    discount=discount,
+                    total=total,
+                    customer_note=f'Coupon: {coupon_code}' if coupon_code else ''
+                )
+                
+                # Create order items and update stock
+                for cart_item in cart_items:
+                    # Check stock
+                    if cart_item.product.stock < cart_item.quantity:
+                        raise Exception(f'Insufficient stock for {cart_item.product.name}')
+                    
+                    # Create order item
+                    OrderItem.objects.create(
+                        order=order,
+                        product=cart_item.product,
+                        variant=cart_item.variant,
+                        vendor=cart_item.product.vendor,
+                        product_name=cart_item.product.name,
+                        product_sku=cart_item.product.sku,
+                        variant_name=cart_item.variant.name if cart_item.variant else '',
+                        quantity=cart_item.quantity,
+                        price=cart_item.price,
+                        total=cart_item.total_price
+                    )
+                    
+                    # Update stock
+                    cart_item.product.stock -= cart_item.quantity
+                    cart_item.product.total_sales += cart_item.quantity
+                    cart_item.product.save()
+                
+                # Get payment method
+                payment_method = request.POST.get('payment_method', 'mpesa')
+                
+                # Create payment
+                payment = Payment.objects.create(
+                    order=order,
+                    payment_method=payment_method,
+                    amount=total,
+                    status='pending'
+                )
+                
+                # Clear cart
+                cart.items.all().delete()
+                
+                # Clear session data
+                if 'coupon_code' in request.session:
+                    del request.session['coupon_code']
+                if 'delivery_method' in request.session:
+                    del request.session['delivery_method']
+                if 'pickup_station_id' in request.session:
+                    del request.session['pickup_station_id']
+                if 'delivery_address_id' in request.session:
+                    del request.session['delivery_address_id']
+                
+                messages.success(request, f'Order {order.order_number} placed successfully!')
+                
+                # Redirect to payment page
+                return redirect('payment_page', order_id=order.id)
+                
+        except Exception as e:
+            messages.error(request, str(e))
             return redirect('checkout')
     
     return redirect('checkout')

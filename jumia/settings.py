@@ -147,3 +147,32 @@ if not DEBUG:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
 
+
+# M-Pesa Credentials (Get from Safaricom Daraja Portal)
+MPESA_ENVIRONMENT = 'sandbox'  # or 'production'
+
+# Sandbox credentials
+MPESA_CONSUMER_KEY = 'your_consumer_key_here'
+MPESA_CONSUMER_SECRET = 'your_consumer_secret_here'
+MPESA_SHORTCODE = 'your_shortcode_here'  # Usually 174379 for sandbox
+MPESA_PASSKEY = 'your_passkey_here'
+
+# API Endpoints
+if MPESA_ENVIRONMENT == 'sandbox':
+    MPESA_AUTH_URL = 'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials'
+    MPESA_STK_PUSH_URL = 'https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest'
+    MPESA_QUERY_URL = 'https://sandbox.safaricom.co.ke/mpesa/stkpushquery/v1/query'
+else:
+    MPESA_AUTH_URL = 'https://api.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials'
+    MPESA_STK_PUSH_URL = 'https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest'
+    MPESA_QUERY_URL = 'https://api.safaricom.co.ke/mpesa/stkpushquery/v1/query'
+
+# Callback URL (must be publicly accessible)
+# For local testing, use ngrok: https://ngrok.com
+MPESA_CALLBACK_URL = 'https://your-domain.com/payment/mpesa/callback/'
+
+# For local development with ngrok:
+# 1. Install ngrok: https://ngrok.com/download
+# 2. Run: ngrok http 8000
+# 3. Copy the https URL and append /payment/mpesa/callback/
+# Example: https://abc123.ngrok.io/payment/mpesa/callback/
