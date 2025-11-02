@@ -13,52 +13,303 @@ from .models import (
     DeliveryZone, Review, Banner
 )
 
+from django.shortcuts import render
+from django.db.models import Q, Count, Avg
+from .models import (
+    Product, Category, Banner, Brand, 
+    Vendor, Review, DeliveryZone
+)
+from datetime import datetime, timedelta
+
 
 def home(request):
-    """Homepage view with featured products and banners"""
+    """Home page view with Jumia-style layout"""
     
-    # Get active banners
-    banners = Banner.objects.filter(is_active=True).order_by('order')[:5]
-    
-    # Featured products
-    featured_products = Product.objects.filter(
-        is_active=True, 
-        is_featured=True
-    ).select_related('brand', 'category', 'vendor')[:12]
-    
-    # New arrivals
-    new_arrivals = Product.objects.filter(
+    # Active banners for hero slider
+    banners = Banner.objects.filter(
         is_active=True
-    ).select_related('brand', 'category', 'vendor').order_by('-created_at')[:12]
+    ).filter(
+        Q(start_date__lte=datetime.now()) | Q(start_date__isnull=True)
+    ).filter(
+        Q(end_date__gte=datetime.now()) | Q(end_date__isnull=True)
+    )[:5]
     
-    # Best sellers
-    best_sellers = Product.objects.filter(
-        is_active=True
-    ).select_related('brand', 'category', 'vendor').order_by('-total_sales')[:12]
-    
-    # Flash deals (products with compare_price > price)
-    flash_deals = Product.objects.filter(
+    # Main categories for sidebar
+    main_categories = Category.objects.filter(
         is_active=True,
-        compare_price__gt=0
-    ).select_related('brand', 'category', 'vendor')[:12]
+        parent__isnull=True
+    ).prefetch_related('children')[:12]
     
-    # Categories with product count
-    categories = Category.objects.filter(
-        parent=None, 
-        is_active=True
-    ).annotate(product_count=Count('products'))[:8]
+    # Flash Sales - products with discount
+    flash_sales = Product.objects.filter(
+        is_active=True,
+        stock__gt=0,
+        compare_price__gt=0
+    ).exclude(
+        compare_price=0
+    ).order_by('-total_sales')[:12]
+    
+    # Top Deals - featured products
+    top_deals = Product.objects.filter(
+        is_active=True,
+        is_featured=True,
+        stock__gt=0
+    ).order_by('-total_sales', '-views')[:20]
+    
+    # Best Sellers
+    best_sellers = Product.objects.filter(
+        is_active=True,
+        stock__gt=0
+    ).order_by('-total_sales')[:12]
+    
+    # New Arrivals - products from last 30 days
+    thirty_days_ago = datetime.now() - timedelta(days=30)
+    new_arrivals = Product.objects.filter(
+        is_active=True,
+        stock__gt=0,
+        created_at__gte=thirty_days_ago
+    ).order_by('-created_at')[:12]
+    
+    # Electronics category
+    electronics = None
+    electronics_products = []
+    try:
+        electronics = Category.objects.get(slug='electronics', is_active=True)
+        electronics_products = Product.objects.filter(
+            category__in=[electronics] + list(electronics.children.all()),
+            is_active=True,
+            stock__gt=0
+        ).order_by('-total_sales')[:12]
+    except Category.DoesNotExist:
+        pass
+    
+    # Fashion category
+    fashion = None
+    fashion_products = []
+    try:
+        fashion = Category.objects.get(slug='fashion', is_active=True)
+        fashion_products = Product.objects.filter(
+            category__in=[fashion] + list(fashion.children.all()),
+            is_active=True,
+            stock__gt=0
+        ).order_by('-total_sales')[:12]
+    except Category.DoesNotExist:
+        pass
+    
+    # Home & Kitchen category
+    home_kitchen = None
+    home_kitchen_products = []
+    try:
+        home_kitchen = Category.objects.get(slug='home-kitchen', is_active=True)
+        home_kitchen_products = Product.objects.filter(
+            category__in=[home_kitchen] + list(home_kitchen.children.all()),
+            is_active=True,
+            stock__gt=0
+        ).order_by('-total_sales')[:12]
+    except Category.DoesNotExist:
+        pass
+    
+    # Phones & Tablets category
+    phones_tablets = None
+    phones_products = []
+    try:
+        phones_tablets = Category.objects.get(slug='phones-tablets', is_active=True)
+        phones_products = Product.objects.filter(
+            category__in=[phones_tablets] + list(phones_tablets.children.all()),
+            is_active=True,
+            stock__gt=0
+        ).order_by('-total_sales')[:12]
+    except Category.DoesNotExist:
+        pass
+    
+    # Top brands
+    top_brands = Brand.objects.filter(
+        is_active=True,
+        products__is_active=True
+    ).annotate(
+        product_count=Count('products')
+    ).filter(
+        product_count__gt=0
+    ).order_by('-product_count')[:12]
+    
+    # Top vendors
+    top_vendors = Vendor.objects.filter(
+        is_active=True,
+        is_verified=True
+    ).order_by('-rating')[:8]
     
     context = {
         'banners': banners,
-        'featured_products': featured_products,
-        'new_arrivals': new_arrivals,
+        'main_categories': main_categories,
+        'flash_sales': flash_sales,
+        'top_deals': top_deals,
         'best_sellers': best_sellers,
-        'flash_deals': flash_deals,
-        'categories': categories,
+        'new_arrivals': new_arrivals,
+        'electronics': electronics,
+        'electronics_products': electronics_products,
+        'fashion': fashion,
+        'fashion_products': fashion_products,
+        'home_kitchen': home_kitchen,
+        'home_kitchen_products': home_kitchen_products,
+        'phones_tablets': phones_tablets,
+        'phones_products': phones_products,
+        'top_brands': top_brands,
+        'top_vendors': top_vendors,
     }
     
-    return render(request, 'e_commerce/home.html', context)
+    return render(request, 'home.html', context)
 
+
+from django.shortcuts import render, get_object_or_404
+from django.core.paginator import Paginator
+from django.db.models import Q, Min, Max, Avg, Count
+from .models import Category, Product, Brand, ProductSpecification
+from decimal import Decimal
+
+
+def category_products(request, slug):
+    """Category products listing with filters"""
+    
+    # Get category
+    category = get_object_or_404(Category, slug=slug, is_active=True)
+    
+    # Get all subcategories
+    subcategories = category.children.filter(is_active=True)
+    
+    # Get all categories in this hierarchy (parent + children)
+    category_ids = [category.id] + list(subcategories.values_list('id', flat=True))
+    
+    # Base queryset
+    products = Product.objects.filter(
+        category_id__in=category_ids,
+        is_active=True,
+        stock__gt=0
+    ).select_related('brand', 'category', 'vendor').prefetch_related('images', 'reviews')
+    
+    # Get filter parameters
+    min_price = request.GET.get('min_price')
+    max_price = request.GET.get('max_price')
+    brand_ids = request.GET.getlist('brand')
+    subcategory_ids = request.GET.getlist('subcategory')
+    rating = request.GET.get('rating')
+    sort_by = request.GET.get('sort', 'popular')
+    
+    # Apply filters
+    if min_price:
+        try:
+            products = products.filter(price__gte=Decimal(min_price))
+        except:
+            pass
+    
+    if max_price:
+        try:
+            products = products.filter(price__lte=Decimal(max_price))
+        except:
+            pass
+    
+    if brand_ids:
+        products = products.filter(brand_id__in=brand_ids)
+    
+    if subcategory_ids:
+        products = products.filter(category_id__in=subcategory_ids)
+    
+    if rating:
+        try:
+            rating_value = int(rating)
+            # Filter products with average rating >= rating_value
+            products = products.annotate(
+                avg_rating=Avg('reviews__rating')
+            ).filter(avg_rating__gte=rating_value)
+        except:
+            pass
+    
+    # Apply sorting
+    if sort_by == 'price_low':
+        products = products.order_by('price')
+    elif sort_by == 'price_high':
+        products = products.order_by('-price')
+    elif sort_by == 'newest':
+        products = products.order_by('-created_at')
+    elif sort_by == 'rating':
+        products = products.annotate(
+            avg_rating=Avg('reviews__rating')
+        ).order_by('-avg_rating')
+    else:  # popular (default)
+        products = products.order_by('-total_sales', '-views')
+    
+    # Get price range for all products in category (for filter slider)
+    price_range = Product.objects.filter(
+        category_id__in=category_ids,
+        is_active=True,
+        stock__gt=0
+    ).aggregate(
+        min_price=Min('price'),
+        max_price=Max('price')
+    )
+    
+    # Get brands available in this category
+    brands = Brand.objects.filter(
+        products__category_id__in=category_ids,
+        products__is_active=True,
+        products__stock__gt=0,
+        is_active=True
+    ).annotate(
+        product_count=Count('products', filter=Q(
+            products__category_id__in=category_ids,
+            products__is_active=True,
+            products__stock__gt=0
+        ))
+    ).filter(product_count__gt=0).order_by('name')
+    
+    # Get common specifications for filtering
+    specifications = ProductSpecification.objects.filter(
+        product__category_id__in=category_ids,
+        product__is_active=True
+    ).values('name').annotate(
+        count=Count('id')
+    ).filter(count__gte=5).order_by('name')[:10]
+    
+    # Get specification values for each spec
+    spec_filters = {}
+    for spec in specifications:
+        spec_name = spec['name']
+        spec_values = ProductSpecification.objects.filter(
+            product__category_id__in=category_ids,
+            product__is_active=True,
+            name=spec_name
+        ).values('value').annotate(
+            count=Count('id')
+        ).order_by('value')[:20]
+        
+        if spec_values:
+            spec_filters[spec_name] = spec_values
+    
+    # Pagination
+    page_number = request.GET.get('page', 1)
+    paginator = Paginator(products, 40)  # 40 products per page
+    page_obj = paginator.get_page(page_number)
+    
+    # Build context
+    context = {
+        'category': category,
+        'subcategories': subcategories,
+        'products': page_obj,
+        'page_obj': page_obj,
+        'brands': brands,
+        'price_range': price_range,
+        'spec_filters': spec_filters,
+        'total_products': products.count(),
+        
+        # Current filters
+        'current_min_price': min_price or '',
+        'current_max_price': max_price or '',
+        'current_brands': [int(b) for b in brand_ids] if brand_ids else [],
+        'current_subcategories': [int(s) for s in subcategory_ids] if subcategory_ids else [],
+        'current_rating': rating or '',
+        'current_sort': sort_by,
+    }
+    
+    return render(request, 'category_products.html', context)
 
 def search(request):
     """Search products"""
@@ -502,65 +753,249 @@ def order_detail(request, order_number):
     
     return render(request, 'e_commerce/order_detail.html', context)
 
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.db.models import Avg, Count, Q
+from django.http import JsonResponse
+from .models import (
+    Product, ProductImage, ProductVariant, 
+    ProductSpecification, Review, Cart, 
+    CartItem, Wishlist, Category
+)
+import json
+
 
 def product_detail(request, slug):
-    """Product detail view"""
+    """Product detail page with all information"""
+    
+    # Get product
     product = get_object_or_404(
-        Product, 
-        slug=slug, 
+        Product.objects.select_related('vendor', 'category', 'brand')
+        .prefetch_related('images', 'variants', 'specifications', 'reviews__user'),
+        slug=slug,
         is_active=True
     )
     
-    # Increment views
+    # Increment view count
     product.views += 1
     product.save(update_fields=['views'])
     
     # Get product images
-    images = product.images.all().order_by('order')
+    images = product.images.all().order_by('order', 'id')
+    primary_image = images.filter(is_primary=True).first() or images.first()
     
-    # Get product variants
+    # Get variants
     variants = product.variants.filter(is_active=True)
     
-    # Get specifications
+    # Get specifications grouped
     specifications = product.specifications.all().order_by('order')
     
-    # Get reviews
-    reviews = product.reviews.filter(is_approved=True).select_related('user').order_by('-created_at')
+    # Get reviews with statistics
+    reviews = product.reviews.filter(is_approved=True).order_by('-created_at')
     
-    # Calculate average rating
-    avg_rating = reviews.aggregate(Avg('rating'))['rating__avg'] or 0
-    rating_counts = {}
-    for i in range(1, 6):
-        rating_counts[i] = reviews.filter(rating=i).count()
+    # Review statistics
+    review_stats = reviews.aggregate(
+        average_rating=Avg('rating'),
+        total_reviews=Count('id'),
+        five_star=Count('id', filter=Q(rating=5)),
+        four_star=Count('id', filter=Q(rating=4)),
+        three_star=Count('id', filter=Q(rating=3)),
+        two_star=Count('id', filter=Q(rating=2)),
+        one_star=Count('id', filter=Q(rating=1)),
+    )
     
-    # Related products
+    # Calculate rating percentages
+    total_reviews = review_stats['total_reviews'] or 1
+    rating_distribution = {
+        5: (review_stats['five_star'] / total_reviews) * 100,
+        4: (review_stats['four_star'] / total_reviews) * 100,
+        3: (review_stats['three_star'] / total_reviews) * 100,
+        2: (review_stats['two_star'] / total_reviews) * 100,
+        1: (review_stats['one_star'] / total_reviews) * 100,
+    }
+    
+    # Check if user has purchased this product
+    has_purchased = False
+    user_review = None
+    if request.user.is_authenticated:
+        has_purchased = product.orderitem_set.filter(
+            order__user=request.user,
+            order__status='delivered'
+        ).exists()
+        
+        # Check if user already reviewed
+        user_review = reviews.filter(user=request.user).first()
+    
+    # Related products (same category)
     related_products = Product.objects.filter(
         category=product.category,
+        is_active=True,
+        stock__gt=0
+    ).exclude(id=product.id).order_by('-total_sales')[:12]
+    
+    # You may also like (from same vendor)
+    vendor_products = Product.objects.filter(
+        vendor=product.vendor,
+        is_active=True,
+        stock__gt=0
+    ).exclude(id=product.id).order_by('-total_sales')[:6]
+    
+    # Recently viewed products (from session)
+    recently_viewed_ids = request.session.get('recently_viewed', [])
+    if product.id in recently_viewed_ids:
+        recently_viewed_ids.remove(product.id)
+    recently_viewed_ids.insert(0, product.id)
+    request.session['recently_viewed'] = recently_viewed_ids[:10]
+    
+    recently_viewed = Product.objects.filter(
+        id__in=recently_viewed_ids,
         is_active=True
-    ).exclude(id=product.id).select_related('brand', 'vendor')[:8]
+    ).exclude(id=product.id)[:6]
     
     # Check if in wishlist
     in_wishlist = False
     if request.user.is_authenticated:
         in_wishlist = Wishlist.objects.filter(
-            user=request.user, 
+            user=request.user,
             product=product
         ).exists()
+    
+    # Breadcrumb categories
+    breadcrumb_categories = []
+    current_category = product.category
+    while current_category:
+        breadcrumb_categories.insert(0, current_category)
+        current_category = current_category.parent
     
     context = {
         'product': product,
         'images': images,
+        'primary_image': primary_image,
         'variants': variants,
         'specifications': specifications,
-        'reviews': reviews,
-        'avg_rating': avg_rating,
-        'rating_counts': rating_counts,
+        'reviews': reviews[:10],  # First 10 reviews
+        'review_stats': review_stats,
+        'rating_distribution': rating_distribution,
+        'has_purchased': has_purchased,
+        'user_review': user_review,
         'related_products': related_products,
+        'vendor_products': vendor_products,
+        'recently_viewed': recently_viewed,
         'in_wishlist': in_wishlist,
+        'breadcrumb_categories': breadcrumb_categories,
     }
     
-    return render(request, 'e_commerce/product_detail.html', context)
+    return render(request, 'product_detail.html', context)
 
+
+@login_required
+def add_to_cart(request, product_id):
+    """Add product to cart"""
+    if request.method == 'POST':
+        product = get_object_or_404(Product, id=product_id, is_active=True)
+        variant_id = request.POST.get('variant_id')
+        quantity = int(request.POST.get('quantity', 1))
+        
+        # Get or create cart
+        cart, created = Cart.objects.get_or_create(user=request.user)
+        
+        # Check if variant is selected
+        variant = None
+        if variant_id:
+            variant = get_object_or_404(ProductVariant, id=variant_id, product=product)
+        
+        # Check stock
+        available_stock = variant.stock if variant else product.stock
+        if quantity > available_stock:
+            messages.error(request, 'Not enough stock available.')
+            return redirect('product_detail', slug=product.slug)
+        
+        # Get or create cart item
+        cart_item, created = CartItem.objects.get_or_create(
+            cart=cart,
+            product=product,
+            variant=variant,
+            defaults={'quantity': quantity, 'price': variant.price if variant else product.price}
+        )
+        
+        if not created:
+            # Update quantity if item already exists
+            cart_item.quantity += quantity
+            if cart_item.quantity > available_stock:
+                cart_item.quantity = available_stock
+            cart_item.save()
+        
+        messages.success(request, f'{product.name} added to cart!')
+        return redirect('cart')
+    
+    return redirect('home')
+
+
+@login_required
+def toggle_wishlist(request, product_id):
+    """Add or remove product from wishlist"""
+    product = get_object_or_404(Product, id=product_id, is_active=True)
+    
+    wishlist_item = Wishlist.objects.filter(user=request.user, product=product).first()
+    
+    if wishlist_item:
+        wishlist_item.delete()
+        in_wishlist = False
+        message = 'Removed from wishlist'
+    else:
+        Wishlist.objects.create(user=request.user, product=product)
+        in_wishlist = True
+        message = 'Added to wishlist'
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'success': True, 'in_wishlist': in_wishlist, 'message': message})
+    
+    messages.success(request, message)
+    return redirect('product_detail', slug=product.slug)
+
+
+@login_required
+def submit_review(request, product_id):
+    """Submit product review"""
+    if request.method == 'POST':
+        product = get_object_or_404(Product, id=product_id, is_active=True)
+        
+        # Check if user has purchased
+        has_purchased = product.orderitem_set.filter(
+            order__user=request.user,
+            order__status='delivered'
+        ).exists()
+        
+        if not has_purchased:
+            messages.error(request, 'You can only review products you have purchased.')
+            return redirect('product_detail', slug=product.slug)
+        
+        # Check if user already reviewed
+        existing_review = Review.objects.filter(user=request.user, product=product).first()
+        if existing_review:
+            messages.error(request, 'You have already reviewed this product.')
+            return redirect('product_detail', slug=product.slug)
+        
+        # Create review
+        rating = int(request.POST.get('rating', 5))
+        title = request.POST.get('title', '')
+        comment = request.POST.get('comment', '')
+        
+        Review.objects.create(
+            product=product,
+            user=request.user,
+            rating=rating,
+            title=title,
+            comment=comment,
+            is_verified_purchase=True,
+            is_approved=False  # Requires admin approval
+        )
+        
+        messages.success(request, 'Your review has been submitted and is pending approval.')
+        return redirect('product_detail', slug=product.slug)
+    
+    return redirect('home')
 
 # AJAX Views for better UX
 @login_required
@@ -642,3 +1077,275 @@ def ajax_toggle_wishlist(request):
             })
     
     return JsonResponse({'success': False, 'message': 'Invalid request.'})
+
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.http import JsonResponse
+from django.db.models import Q
+from .models import Cart, CartItem, Product, ProductVariant
+from decimal import Decimal
+import json
+
+
+@login_required
+def cart_view(request):
+    """Shopping cart page"""
+    
+    # Get or create cart for user
+    cart, created = Cart.objects.get_or_create(user=request.user)
+    
+    # Get cart items with related data
+    cart_items = cart.items.select_related(
+        'product__brand',
+        'product__vendor',
+        'product__category',
+        'variant'
+    ).prefetch_related(
+        'product__images'
+    ).all()
+    
+    # Calculate totals
+    subtotal = cart.subtotal
+    
+    # Delivery fee (simplified - you might want to calculate based on location)
+    delivery_fee = Decimal('200.00') if cart_items.exists() else Decimal('0.00')
+    
+    # Total
+    total = subtotal + delivery_fee
+    
+    # Get recently viewed products (from session or cookie)
+    recently_viewed_ids = request.session.get('recently_viewed', [])
+    recently_viewed = Product.objects.filter(
+        id__in=recently_viewed_ids,
+        is_active=True,
+        stock__gt=0
+    ).prefetch_related('images')[:8]
+    
+    # Get recommended products based on cart items
+    if cart_items.exists():
+        # Get categories from cart items
+        cart_categories = [item.product.category_id for item in cart_items if item.product.category]
+        
+        # Get similar products
+        similar_products = Product.objects.filter(
+            category_id__in=cart_categories,
+            is_active=True,
+            stock__gt=0
+        ).exclude(
+            id__in=[item.product_id for item in cart_items]
+        ).order_by('-total_sales')[:8]
+    else:
+        # Show popular products if cart is empty
+        similar_products = Product.objects.filter(
+            is_active=True,
+            stock__gt=0
+        ).order_by('-total_sales')[:8]
+    
+    context = {
+        'cart': cart,
+        'cart_items': cart_items,
+        'subtotal': subtotal,
+        'delivery_fee': delivery_fee,
+        'total': total,
+        'recently_viewed': recently_viewed,
+        'similar_products': similar_products,
+    }
+    
+    return render(request, 'cart.html', context)
+
+
+@login_required
+def update_cart_item(request, item_id):
+    """Update cart item quantity via AJAX"""
+    if request.method == 'POST':
+        try:
+            cart_item = get_object_or_404(
+                CartItem,
+                id=item_id,
+                cart__user=request.user
+            )
+            
+            action = request.POST.get('action')
+            
+            if action == 'increase':
+                # Check stock availability
+                if cart_item.product.stock > cart_item.quantity:
+                    cart_item.quantity += 1
+                    cart_item.save()
+                else:
+                    return JsonResponse({
+                        'error': 'Maximum stock reached'
+                    }, status=400)
+            
+            elif action == 'decrease':
+                if cart_item.quantity > 1:
+                    cart_item.quantity -= 1
+                    cart_item.save()
+                else:
+                    return JsonResponse({
+                        'error': 'Minimum quantity is 1'
+                    }, status=400)
+            
+            elif action == 'update':
+                quantity = int(request.POST.get('quantity', 1))
+                
+                if quantity < 1:
+                    return JsonResponse({
+                        'error': 'Minimum quantity is 1'
+                    }, status=400)
+                
+                if quantity > cart_item.product.stock:
+                    return JsonResponse({
+                        'error': 'Insufficient stock'
+                    }, status=400)
+                
+                cart_item.quantity = quantity
+                cart_item.save()
+            
+            # Recalculate totals
+            cart = cart_item.cart
+            item_total = cart_item.total_price
+            cart_subtotal = cart.subtotal
+            delivery_fee = Decimal('200.00')
+            cart_total = cart_subtotal + delivery_fee
+            
+            return JsonResponse({
+                'success': True,
+                'quantity': cart_item.quantity,
+                'item_total': float(item_total),
+                'cart_subtotal': float(cart_subtotal),
+                'cart_total': float(cart_total),
+                'total_items': cart.total_items
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'error': str(e)
+            }, status=400)
+    
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
+@login_required
+def remove_cart_item(request, item_id):
+    """Remove item from cart"""
+    if request.method == 'POST':
+        try:
+            cart_item = get_object_or_404(
+                CartItem,
+                id=item_id,
+                cart__user=request.user
+            )
+            
+            cart = cart_item.cart
+            cart_item.delete()
+            
+            # Recalculate totals
+            cart_subtotal = cart.subtotal
+            delivery_fee = Decimal('200.00') if cart.items.exists() else Decimal('0.00')
+            cart_total = cart_subtotal + delivery_fee
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Item removed from cart',
+                'cart_subtotal': float(cart_subtotal),
+                'cart_total': float(cart_total),
+                'total_items': cart.total_items,
+                'cart_empty': not cart.items.exists()
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'error': str(e)
+            }, status=400)
+    
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
+@login_required
+def clear_cart(request):
+    """Clear all items from cart"""
+    if request.method == 'POST':
+        try:
+            cart = Cart.objects.get(user=request.user)
+            cart.items.all().delete()
+            
+            messages.success(request, 'Cart cleared successfully')
+            return redirect('cart')
+            
+        except Cart.DoesNotExist:
+            messages.error(request, 'Cart not found')
+            return redirect('cart')
+    
+    return redirect('cart')
+
+
+def add_to_cart(request, product_id):
+    """Add product to cart (updated version)"""
+    if not request.user.is_authenticated:
+        return JsonResponse({
+            'error': 'Please login to add items to cart',
+            'redirect': '/login/'
+        }, status=401)
+    
+    if request.method == 'POST':
+        try:
+            product = get_object_or_404(Product, id=product_id, is_active=True)
+            quantity = int(request.POST.get('quantity', 1))
+            variant_id = request.POST.get('variant_id')
+            
+            # Validate quantity
+            if quantity < 1:
+                return JsonResponse({'error': 'Invalid quantity'}, status=400)
+            
+            # Check stock
+            if product.stock < quantity:
+                return JsonResponse({'error': 'Insufficient stock'}, status=400)
+            
+            # Get or create cart
+            cart, created = Cart.objects.get_or_create(user=request.user)
+            
+            # Get variant if specified
+            variant = None
+            if variant_id:
+                variant = get_object_or_404(ProductVariant, id=variant_id, product=product)
+                if variant.stock < quantity:
+                    return JsonResponse({'error': 'Insufficient variant stock'}, status=400)
+            
+            # Check if item already in cart
+            cart_item = CartItem.objects.filter(
+                cart=cart,
+                product=product,
+                variant=variant
+            ).first()
+            
+            if cart_item:
+                # Update quantity
+                new_quantity = cart_item.quantity + quantity
+                if new_quantity > product.stock:
+                    return JsonResponse({'error': 'Insufficient stock'}, status=400)
+                cart_item.quantity = new_quantity
+                cart_item.save()
+            else:
+                # Create new cart item
+                price = variant.price if variant and variant.price else product.price
+                CartItem.objects.create(
+                    cart=cart,
+                    product=product,
+                    variant=variant,
+                    quantity=quantity,
+                    price=price
+                )
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Product added to cart',
+                'cart_count': cart.total_items
+            })
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+    
+    return JsonResponse({'error': 'Invalid request'}, status=400)
