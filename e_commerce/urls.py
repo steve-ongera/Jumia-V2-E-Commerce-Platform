@@ -22,6 +22,19 @@ urlpatterns = [
     path('remove-from-cart/<int:product_id>/', views.remove_from_cart, name='remove_from_cart'),
     path('update-cart/<int:product_id>/', views.update_cart, name='update_cart'),
 
+    # Authentication
+    path('login/', views.login_view, name='login'),
+    path('register/', views.register_view, name='register'),
+    path('logout/', views.logout_view, name='logout'),
+    
+    # Password Reset
+    path('forgot-password/', views.forgot_password_view, name='forgot_password'),
+    path('reset-password/<uidb64>/<token>/', views.reset_password_view, name='reset_password'),
+    path('change-password/', views.change_password_view, name='change_password'),
+    
+    # AJAX
+    path('check-email/', views.check_email_exists, name='check_email'),
+
     # Cart
     path('cart/', views.cart_view, name='cart'),
     path('cart/add/<int:product_id>/', views.add_to_cart, name='add_to_cart'),

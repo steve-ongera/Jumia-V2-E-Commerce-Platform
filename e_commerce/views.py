@@ -21,6 +21,256 @@ from .models import (
 )
 from datetime import datetime, timedelta
 
+from django.shortcuts import render, redirect
+from django.contrib.auth import login, authenticate, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.core.mail import send_mail
+from django.conf import settings
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.contrib.auth.tokens import default_token_generator
+from django.template.loader import render_to_string
+from django.http import JsonResponse
+from .models import User
+import json
+
+
+def login_view(request):
+    """Login view"""
+    if request.user.is_authenticated:
+        return redirect('home')
+    
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip()
+        password = request.POST.get('password', '')
+        
+        if not email or not password:
+            messages.error(request, 'Please provide both email and password')
+            return render(request, 'auth/login.html')
+        
+        # Authenticate user
+        try:
+            user = User.objects.get(email=email)
+            user = authenticate(request, username=user.username, password=password)
+            
+            if user is not None:
+                login(request, user)
+                messages.success(request, f'Welcome back, {user.first_name or user.username}!')
+                
+                # Redirect to next page or home
+                next_url = request.GET.get('next', 'home')
+                return redirect(next_url)
+            else:
+                messages.error(request, 'Invalid email or password')
+        except User.DoesNotExist:
+            messages.error(request, 'Invalid email or password')
+    
+    return render(request, 'auth/login.html')
+
+
+def register_view(request):
+    """Registration view"""
+    if request.user.is_authenticated:
+        return redirect('home')
+    
+    if request.method == 'POST':
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        email = request.POST.get('email', '').strip()
+        phone_number = request.POST.get('phone_number', '').strip()
+        password = request.POST.get('password', '')
+        confirm_password = request.POST.get('confirm_password', '')
+        
+        # Validation
+        if not all([first_name, last_name, email, phone_number, password]):
+            messages.error(request, 'All fields are required')
+            return render(request, 'auth/register.html')
+        
+        if password != confirm_password:
+            messages.error(request, 'Passwords do not match')
+            return render(request, 'auth/register.html')
+        
+        if len(password) < 6:
+            messages.error(request, 'Password must be at least 6 characters long')
+            return render(request, 'auth/register.html')
+        
+        # Check if email exists
+        if User.objects.filter(email=email).exists():
+            messages.error(request, 'Email already registered')
+            return render(request, 'auth/register.html')
+        
+        # Check if phone exists
+        if User.objects.filter(phone_number=phone_number).exists():
+            messages.error(request, 'Phone number already registered')
+            return render(request, 'auth/register.html')
+        
+        try:
+            # Create user
+            username = email.split('@')[0] + str(User.objects.count() + 1)
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password,
+                first_name=first_name,
+                last_name=last_name,
+                phone_number=phone_number
+            )
+            
+            # Auto login after registration
+            login(request, user)
+            messages.success(request, 'Account created successfully! Welcome to Jumia.')
+            return redirect('home')
+            
+        except Exception as e:
+            messages.error(request, f'Error creating account: {str(e)}')
+    
+    return render(request, 'auth/register.html')
+
+
+def logout_view(request):
+    """Logout view"""
+    logout(request)
+    messages.success(request, 'You have been logged out successfully')
+    return redirect('login')
+
+
+def forgot_password_view(request):
+    """Forgot password view"""
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip()
+        
+        if not email:
+            messages.error(request, 'Please provide your email address')
+            return render(request, 'auth/forgot_password.html')
+        
+        try:
+            user = User.objects.get(email=email)
+            
+            # Generate password reset token
+            token = default_token_generator.make_token(user)
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            
+            # Build reset link
+            reset_link = request.build_absolute_uri(
+                f'/auth/reset-password/{uid}/{token}/'
+            )
+            
+            # Send email
+            subject = 'Reset Your Jumia Password'
+            message = render_to_string('auth/password_reset_email.html', {
+                'user': user,
+                'reset_link': reset_link,
+            })
+            
+            send_mail(
+                subject,
+                message,
+                settings.DEFAULT_FROM_EMAIL,
+                [email],
+                fail_silently=False,
+            )
+            
+            messages.success(request, 'Password reset link has been sent to your email')
+            return redirect('login')
+            
+        except User.DoesNotExist:
+            # Don't reveal that email doesn't exist for security
+            messages.success(request, 'If that email exists, a password reset link has been sent')
+            return redirect('login')
+        except Exception as e:
+            messages.error(request, 'Error sending reset email. Please try again later.')
+    
+    return render(request, 'auth/forgot_password.html')
+
+
+def reset_password_view(request, uidb64, token):
+    """Reset password view"""
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+    
+    if user is not None and default_token_generator.check_token(user, token):
+        if request.method == 'POST':
+            password = request.POST.get('password', '')
+            confirm_password = request.POST.get('confirm_password', '')
+            
+            if not password or not confirm_password:
+                messages.error(request, 'Please provide both password fields')
+                return render(request, 'auth/reset_password.html')
+            
+            if password != confirm_password:
+                messages.error(request, 'Passwords do not match')
+                return render(request, 'auth/reset_password.html')
+            
+            if len(password) < 6:
+                messages.error(request, 'Password must be at least 6 characters long')
+                return render(request, 'auth/reset_password.html')
+            
+            # Set new password
+            user.set_password(password)
+            user.save()
+            
+            messages.success(request, 'Password reset successful! Please login with your new password.')
+            return redirect('login')
+        
+        return render(request, 'auth/reset_password.html', {'valid_link': True})
+    else:
+        messages.error(request, 'Invalid or expired reset link')
+        return redirect('forgot_password')
+
+
+@login_required
+def change_password_view(request):
+    """Change password for logged in user"""
+    if request.method == 'POST':
+        old_password = request.POST.get('old_password', '')
+        new_password = request.POST.get('new_password', '')
+        confirm_password = request.POST.get('confirm_password', '')
+        
+        if not all([old_password, new_password, confirm_password]):
+            messages.error(request, 'All fields are required')
+            return render(request, 'auth/change_password.html')
+        
+        # Check old password
+        if not request.user.check_password(old_password):
+            messages.error(request, 'Current password is incorrect')
+            return render(request, 'auth/change_password.html')
+        
+        if new_password != confirm_password:
+            messages.error(request, 'New passwords do not match')
+            return render(request, 'auth/change_password.html')
+        
+        if len(new_password) < 6:
+            messages.error(request, 'Password must be at least 6 characters long')
+            return render(request, 'auth/change_password.html')
+        
+        # Set new password
+        request.user.set_password(new_password)
+        request.user.save()
+        
+        # Keep user logged in after password change
+        login(request, request.user)
+        
+        messages.success(request, 'Password changed successfully!')
+        return redirect('account')
+    
+    return render(request, 'auth/change_password.html')
+
+
+def check_email_exists(request):
+    """AJAX endpoint to check if email exists"""
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        email = data.get('email', '').strip()
+        
+        exists = User.objects.filter(email=email).exists()
+        return JsonResponse({'exists': exists})
+    
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
 
 def home(request):
     """Home page view with Jumia-style layout"""
@@ -1497,8 +1747,8 @@ def update_delivery_method(request):
                 if station_id:
                     station = get_object_or_404(PickupStation, id=station_id, is_active=True)
                     request.session['pickup_station_id'] = station_id
-                    # Pickup station fee (could vary by station)
-                    delivery_fee = Decimal('150.00')
+                    # Use station-specific fee if available, otherwise default
+                    delivery_fee = getattr(station, 'delivery_fee', Decimal('150.00'))
                 else:
                     delivery_fee = Decimal('150.00')
             else:  # home_delivery
@@ -1555,7 +1805,6 @@ def update_delivery_method(request):
             }, status=400)
     
     return JsonResponse({'error': 'Invalid request'}, status=400)
-
 
 @login_required
 def apply_coupon(request):

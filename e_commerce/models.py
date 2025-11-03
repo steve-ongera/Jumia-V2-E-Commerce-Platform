@@ -60,6 +60,7 @@ class PickupStation(models.Model):
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     is_active = models.BooleanField(default=True)
     capacity = models.IntegerField(default=100)
+    delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=150.00)
     
     class Meta:
         db_table = 'pickup_stations'

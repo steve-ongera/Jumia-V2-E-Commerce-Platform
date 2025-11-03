@@ -522,6 +522,11 @@
         background: #e67e0f;
     }
 
+    .confirm-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+    }
+
     .terms-notice {
         text-align: center;
         font-size: 12px;
@@ -551,6 +556,12 @@
 
     .back-link:hover {
         text-decoration: underline;
+    }
+
+    /* Loading Indicator */
+    .loading {
+        opacity: 0.6;
+        pointer-events: none;
     }
 
     /* Responsive */
@@ -659,13 +670,13 @@
                         <span class="step-number">✓</span>
                         2. DELIVERY DETAILS
                     </div>
-                    <a href="#" class="change-btn" onclick="toggleDeliveryChange(); return false;">Change</a>
                 </div>
                 <div class="step-content">
                     <div class="delivery-options">
                         <!-- Pickup Station -->
                         <div class="delivery-option {% if delivery_method == 'pickup_station' %}active{% endif %}" 
-                             onclick="selectDeliveryMethod('pickup_station')">
+                             id="pickupOption"
+                             onclick="selectDeliveryMethod('pickup_station', this)">
                             <div class="delivery-option-header">
                                 <div class="option-title">
                                     <i class="fas fa-store option-icon"></i>
@@ -676,8 +687,8 @@
                             <div class="option-details">
                                 <div>Collect from one of our pick-up stations</div>
                                 <div class="delivery-date">
-                                    Delivery between <strong id="pickupStartDate">{{ current_date|date:"d M" }}</strong> 
-                                    and <strong id="pickupEndDate">{{ future_date|date:"d M" }}</strong>
+                                    Delivery between <strong>{{ current_date|date:"d M" }}</strong> 
+                                    and <strong>{{ future_date|date:"d M" }}</strong>
                                 </div>
                             </div>
 
@@ -689,8 +700,9 @@
                                     <option value="{{ station.id }}" 
                                             data-name="{{ station.name }}"
                                             data-address="{{ station.address }}"
-                                            data-hours="{{ station.operating_hours }}">
-                                        {{ station.name }} - {{ station.city }}
+                                            data-hours="{{ station.operating_hours }}"
+                                            data-fee="{{ station.delivery_fee|default:'150' }}">
+                                        {{ station.name }} - {{ station.city }} (KSh {{ station.delivery_fee|default:'150'|floatformat:0 }})
                                     </option>
                                     {% endfor %}
                                 </select>
@@ -705,7 +717,8 @@
 
                         <!-- Home Delivery -->
                         <div class="delivery-option {% if delivery_method == 'home_delivery' %}active{% endif %}" 
-                             onclick="selectDeliveryMethod('home_delivery')">
+                             id="homeOption"
+                             onclick="selectDeliveryMethod('home_delivery', this)">
                             <div class="delivery-option-header">
                                 <div class="option-title">
                                     <i class="fas fa-truck option-icon"></i>
@@ -776,7 +789,6 @@
                         <span class="step-number pending">3</span>
                         3. PAYMENT METHOD
                     </div>
-                    <a href="#" class="change-btn" onclick="togglePaymentChange(); return false;">Change</a>
                 </div>
                 <div class="step-content">
                     <div class="payment-methods">
@@ -832,9 +844,14 @@
             </div>
 
             {% if discount > 0 %}
-            <div class="summary-row">
+            <div class="summary-row" id="discountRow">
                 <span class="summary-label">Discount</span>
                 <span class="summary-value" style="color: #28a745;">-KSh <span id="discountAmount">{{ discount|floatformat:0 }}</span></span>
+            </div>
+            {% else %}
+            <div class="summary-row" id="discountRow" style="display: none;">
+                <span class="summary-label">Discount</span>
+                <span class="summary-value" style="color: #28a745;">-KSh <span id="discountAmount">0</span></span>
             </div>
             {% endif %}
 
@@ -847,12 +864,12 @@
                 <!-- Coupon Section -->
                 <div class="coupon-section">
                     {% if coupon %}
-                    <div class="coupon-applied">
+                    <div class="coupon-applied" id="couponApplied">
                         <span>Coupon "{{ coupon.code }}" applied</span>
                         <span class="remove-coupon" onclick="removeCoupon()">✕</span>
                     </div>
                     {% else %}
-                    <div class="coupon-input-group">
+                    <div class="coupon-input-group" id="couponInputGroup">
                         <input type="text" class="coupon-input" id="couponInput" placeholder="Enter code here">
                         <button class="apply-coupon-btn" onclick="applyCoupon()">APPLY</button>
                     </div>
@@ -862,7 +879,7 @@
                 <form method="POST" action="{% url 'place_order' %}" id="checkoutForm">
                     {% csrf_token %}
                     <input type="hidden" name="payment_method" id="paymentMethodInput" value="mpesa">
-                    <button type="submit" class="confirm-btn">Confirm order</button>
+                    <button type="submit" class="confirm-btn" id="confirmBtn">Confirm order</button>
                 </form>
 
                 <div class="terms-notice">
@@ -881,6 +898,7 @@
     let currentPaymentMethod = 'mpesa';
     let selectedStationId = null;
     let selectedAddressId = {{ default_address.id|default:'null' }};
+    let isUpdating = false;
 
     // Toggle address selector
     function toggleAddressChange() {
@@ -890,32 +908,26 @@
 
     // Change address
     function changeAddress(addressId) {
-        selectedAddressId = addressId;
-        // Reload or update via AJAX
-        if (currentDeliveryMethod === 'home_delivery') {
-            updateDeliveryFee();
+        if (addressId && addressId !== selectedAddressId) {
+            selectedAddressId = addressId;
+            // If home delivery is selected, update the fee
+            if (currentDeliveryMethod === 'home_delivery') {
+                updateDeliveryFee();
+            }
         }
     }
 
-    // Toggle delivery change
-    function toggleDeliveryChange() {
-        // Can be implemented to show/hide delivery options
-    }
-
-    // Toggle payment change
-    function togglePaymentChange() {
-        // Can be implemented to show/hide payment options
-    }
-
     // Select delivery method
-    function selectDeliveryMethod(method) {
+    function selectDeliveryMethod(method, element) {
+        if (isUpdating) return;
+        
         currentDeliveryMethod = method;
 
         // Update UI
         document.querySelectorAll('.delivery-option').forEach(opt => {
             opt.classList.remove('active');
         });
-        event.currentTarget.classList.add('active');
+        element.classList.add('active');
 
         // Show/hide station selector
         const stationSelector = document.getElementById('stationSelector');
@@ -931,6 +943,8 @@
 
     // Select pickup station
     function selectPickupStation(stationId) {
+        if (isUpdating) return;
+        
         selectedStationId = stationId;
 
         if (!stationId) {
@@ -941,17 +955,26 @@
         const select = document.getElementById('pickupStationSelect');
         const option = select.options[select.selectedIndex];
 
+        // Update station info display
         document.getElementById('stationName').textContent = option.dataset.name;
         document.getElementById('stationAddress').textContent = option.dataset.address;
         document.getElementById('stationHours').textContent = option.dataset.hours;
         document.getElementById('stationInfo').style.display = 'block';
 
-        // Update delivery fee
+        // Update delivery fee via AJAX
         updateDeliveryFee();
     }
 
     // Update delivery fee via AJAX
     function updateDeliveryFee() {
+        if (isUpdating) return;
+        
+        isUpdating = true;
+        
+        // Show loading state
+        const summary = document.querySelector('.order-summary');
+        summary.classList.add('loading');
+
         const data = {
             delivery_method: currentDeliveryMethod,
             station_id: selectedStationId,
@@ -969,11 +992,11 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Update amounts
+                // Update amounts with formatted values
                 document.getElementById('deliveryFeeAmount').textContent = Math.round(data.delivery_fee).toLocaleString();
                 document.getElementById('totalAmount').textContent = Math.round(data.total).toLocaleString();
 
-                // Update fee badges
+                // Update fee badges based on delivery method
                 if (currentDeliveryMethod === 'pickup_station') {
                     document.getElementById('pickupFee').textContent = Math.round(data.delivery_fee);
                 } else {
@@ -983,11 +1006,23 @@
                 // Update discount if present
                 if (data.discount > 0) {
                     document.getElementById('discountAmount').textContent = Math.round(data.discount).toLocaleString();
+                    document.getElementById('discountRow').style.display = 'flex';
+                } else {
+                    document.getElementById('discountRow').style.display = 'none';
                 }
+            } else {
+                console.error('Failed to update delivery fee');
+                alert('Failed to update delivery fee. Please try again.');
             }
         })
         .catch(error => {
             console.error('Error:', error);
+            alert('An error occurred while updating delivery fee.');
+        })
+        .finally(() => {
+            // Remove loading state
+            summary.classList.remove('loading');
+            isUpdating = false;
         });
     }
 
@@ -1014,6 +1049,11 @@
             return;
         }
 
+        // Disable button during request
+        const button = event.target;
+        button.disabled = true;
+        button.textContent = 'APPLYING...';
+
         fetch('{% url "apply_coupon" %}', {
             method: 'POST',
             headers: {
@@ -1034,13 +1074,19 @@
         .catch(error => {
             console.error('Error:', error);
             alert('An error occurred. Please try again.');
+        })
+        .finally(() => {
+            button.disabled = false;
+            button.textContent = 'APPLY';
         });
     }
 
     // Remove coupon
     function removeCoupon() {
         if (confirm('Remove this coupon?')) {
-            location.href = '#';
+            // You can implement AJAX call to remove coupon from session
+            // For now, just reload
+            window.location.href = '{% url "checkout" %}';
         }
     }
 
@@ -1049,6 +1095,9 @@
         if (currentDeliveryMethod === 'pickup_station' && !selectedStationId) {
             e.preventDefault();
             alert('Please select a pickup station');
+            
+            // Scroll to pickup station selector
+            document.getElementById('stationSelector').scrollIntoView({ behavior: 'smooth', block: 'center' });
             return false;
         }
 
@@ -1056,6 +1105,23 @@
             e.preventDefault();
             alert('Please select a delivery address');
             return false;
+        }
+
+        // Disable submit button to prevent double submission
+        const submitBtn = document.getElementById('confirmBtn');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Processing...';
+    });
+
+    // Initialize: If pickup station is pre-selected in delivery method
+    window.addEventListener('DOMContentLoaded', function() {
+        // If pickup is the default delivery method, check if we need to pre-select a station
+        if (currentDeliveryMethod === 'pickup_station') {
+            const stationSelect = document.getElementById('pickupStationSelect');
+            if (stationSelect.value) {
+                selectedStationId = stationSelect.value;
+                selectPickupStation(stationSelect.value);
+            }
         }
     });
 </script>
