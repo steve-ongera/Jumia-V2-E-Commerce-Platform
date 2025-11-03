@@ -2,14 +2,39 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-    <meta name="description" content="Shop online for Electronics, Phones, Fashion, Health & Beauty, Home & Kitchen and more on Jumia Kenya">
-    <title>{% block title %}Jumia Kenya - Online Shopping for Electronics, Phones, Fashion & More{% endblock %}</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
     
+    <!--  SEO Meta Tags -->
+    <title>{% block title %}Jumia Kenya - Online Shopping for Electronics, Phones, Fashion & More{% endblock %}</title>
+    <meta name="description" content="Shop online for Electronics, Phones, Fashion, Beauty, Home & Kitchen & more at great prices. Fast delivery across Kenya.">
+    <meta name="keywords" content="Jumia, Jumia Kenya, Online Shopping Kenya, Electronics, Mobile Phones, Fashion, Home Appliances, Laptops">
+    <meta name="author" content="YourBrandName">
+    
+    <!--  Open Graph (Social Sharing Preview) -->
+    <meta property="og:title" content="Jumia Kenya - Online Shopping for Electronics, Phones & Fashion" />
+    <meta property="og:description" content="Shop online for Electronics, Phones, Fashion & more at great prices & fast delivery in Kenya.">
+    <meta property="og:image" content="{% static 'images/preview.jpg' %}" />
+    <meta property="og:url" content="{{ request.build_absolute_uri }}">
+    <meta property="og:type" content="website" />
+
+    <!--  Twitter Cards -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Jumia Kenya - Online Shopping">
+    <meta name="twitter:description" content="Buy electronics, phones, laptops, fashion & more. Affordable, fast delivery across Kenya.">
+    <meta name="twitter:image" content="{% static 'images/preview.jpg' %}">
+
+    <!--  Favicon -->
+    <link rel="icon" type="image/png" href="{% static 'images/jumia_logo.png' %}" sizes="32x32" />
+    <link rel="apple-touch-icon" href="{% static 'images/jumia_logo.png' %}">
+    <link rel="shortcut icon" href="{% static 'images/jumia_logo.png' %}" />
+
+    <!--  Canonical URL (Avoid Duplicate SEO Issues) -->
+    <link rel="canonical" href="{{ request.build_absolute_uri }}">
+
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    
+
     <!-- Custom CSS -->
     <style>
         * {
@@ -96,29 +121,32 @@
             align-items: center;
             gap: 20px;
         }
-        
+
+        /* Logo wrapper */
         .logo {
-            font-size: 24px;
-            font-weight: bold;
-            color: #f68b1e;
             display: flex;
             align-items: center;
-            flex-shrink: 0;
+            text-decoration: none;
+            height: 45px; /* same height consistency */
         }
+
+        /* Logo image styling */
+        .logo-img {
+            height: 100%;
+            width: auto; /* prevent stretching */
+            object-fit: contain;
+            display: block;
+        }
+
+        /* If header shrinks on mobile */
+        @media (max-width: 768px) {
+            .logo {
+                height: 38px;
+            }
+        }
+
         
-        .logo-text {
-            font-size: 28px;
-            font-weight: 900;
-        }
-        
-        .logo-badge {
-            font-size: 10px;
-            background: #f68b1e;
-            color: #fff;
-            padding: 2px 4px;
-            border-radius: 3px;
-            margin-left: 3px;
-        }
+       
         
         /* Search Bar */
         .search-container {
@@ -809,9 +837,9 @@
             </div>
             
             <a href="/" class="logo" aria-label="Jumia Kenya Home">
-                <span class="logo-text">JUMIA</span>
-                <span class="logo-badge">V2</span>
+                <img src="{% static 'images/Jumia-Logo.png' %}" alt="Jumia Kenya Logo" class="logo-img">
             </a>
+
             
             <div class="search-container">
                 <form class="search-form" method="GET" action="{% url 'search' %}" role="search">
@@ -837,7 +865,7 @@
                        aria-expanded="false">
                         <i class="bi bi-person"></i>
                         <span>Account</span>
-                        <i class="bi bi-caret-down-fill dropdown-icon"></i>
+                       <i class="bi bi-chevron-down dropdown-icon"></i>
                     </a>
 
                     <ul class="dropdown-menu" role="menu" aria-label="Account menu">
