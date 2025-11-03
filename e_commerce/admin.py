@@ -47,7 +47,7 @@ class AddressAdmin(admin.ModelAdmin):
 # Pickup Station Admin
 @admin.register(PickupStation)
 class PickupStationAdmin(admin.ModelAdmin):
-    list_display = ['name', 'code', 'city', 'region', 'phone_number', 'is_active', 'capacity']
+    list_display = ['name', 'code', 'city', 'region', 'phone_number', 'is_active', 'delivery_fee']
     list_filter = ['region', 'city', 'is_active']
     search_fields = ['name', 'code', 'city', 'region']
     list_editable = ['is_active']

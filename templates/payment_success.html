@@ -1,0 +1,504 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Payment Successful - Jumia Kenya{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    .payment-container {
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 0 20px;
+    }
+
+    .success-card {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+
+    .success-header {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        padding: 40px 30px;
+        text-align: center;
+        color: white;
+    }
+
+    .success-icon {
+        width: 80px;
+        height: 80px;
+        background: rgba(255,255,255,0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+        animation: scaleIn 0.5s ease-out;
+    }
+
+    @keyframes scaleIn {
+        from {
+            transform: scale(0);
+        }
+        to {
+            transform: scale(1);
+        }
+    }
+
+    .success-icon i {
+        font-size: 45px;
+        color: white;
+    }
+
+    .success-title {
+        font-size: 28px;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+
+    .success-message {
+        font-size: 16px;
+        opacity: 0.95;
+    }
+
+    .success-body {
+        padding: 30px;
+    }
+
+    .order-summary {
+        background: #f9f9f9;
+        border-radius: 6px;
+        padding: 20px;
+        margin-bottom: 25px;
+    }
+
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+    .summary-row:last-child {
+        border-bottom: none;
+        padding-top: 15px;
+        font-weight: bold;
+        font-size: 18px;
+    }
+
+    .summary-label {
+        color: #666;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .summary-value {
+        color: #282828;
+        font-weight: 500;
+    }
+
+    .order-details {
+        margin-bottom: 25px;
+    }
+
+    .detail-card {
+        border: 1px solid #f0f0f0;
+        border-radius: 6px;
+        padding: 20px;
+        margin-bottom: 15px;
+    }
+
+    .detail-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 15px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .detail-icon {
+        width: 40px;
+        height: 40px;
+        background: #feefea;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .detail-icon i {
+        font-size: 20px;
+        color: #f68b1e;
+    }
+
+    .detail-title {
+        font-size: 16px;
+        font-weight: bold;
+        color: #282828;
+    }
+
+    .detail-content {
+        font-size: 14px;
+        color: #666;
+        line-height: 1.8;
+    }
+
+    .detail-content strong {
+        color: #282828;
+        display: inline-block;
+        min-width: 140px;
+    }
+
+    .detail-item {
+        margin-bottom: 8px;
+    }
+
+    .action-buttons {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+        margin-top: 30px;
+    }
+
+    .btn {
+        padding: 14px 20px;
+        border-radius: 6px;
+        font-size: 15px;
+        font-weight: 600;
+        text-align: center;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.3s;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .btn-primary {
+        background: #f68b1e;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #e67e0f;
+        color: white;
+    }
+
+    .btn-outline {
+        background: white;
+        color: #f68b1e;
+        border: 2px solid #f68b1e;
+    }
+
+    .btn-outline:hover {
+        background: #feefea;
+        color: #f68b1e;
+    }
+
+    .info-box {
+        background: #e7f5ff;
+        border-left: 4px solid #1c7ed6;
+        padding: 15px 20px;
+        border-radius: 4px;
+        margin-top: 20px;
+    }
+
+    .info-box p {
+        margin: 0;
+        color: #1864ab;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+
+    .info-box i {
+        margin-right: 8px;
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .status-badge i {
+        font-size: 14px;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .payment-container {
+            margin: 20px auto;
+        }
+
+        .success-header {
+            padding: 30px 20px;
+        }
+
+        .success-title {
+            font-size: 22px;
+        }
+
+        .success-body {
+            padding: 20px;
+        }
+
+        .action-buttons {
+            grid-template-columns: 1fr;
+        }
+
+        .detail-content strong {
+            min-width: 120px;
+        }
+    }
+
+    /* Print Styles */
+    @media print {
+        .action-buttons,
+        .info-box {
+            display: none;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="payment-container">
+    <div class="success-card">
+        <!-- Success Header -->
+        <div class="success-header">
+            <div class="success-icon">
+                <i class="bi bi-check-circle-fill"></i>
+            </div>
+            <h1 class="success-title">Payment Successful!</h1>
+            <p class="success-message">Your order has been placed successfully</p>
+        </div>
+
+        <!-- Success Body -->
+        <div class="success-body">
+            <!-- Order Summary -->
+            <div class="order-summary">
+                <div class="summary-row">
+                    <div class="summary-label">
+                        <i class="bi bi-receipt"></i>
+                        Order Number
+                    </div>
+                    <div class="summary-value">{{ order.order_number }}</div>
+                </div>
+                
+                {% if payment %}
+                <div class="summary-row">
+                    <div class="summary-label">
+                        <i class="bi bi-credit-card"></i>
+                        Transaction ID
+                    </div>
+                    <div class="summary-value">{{ payment.transaction_id }}</div>
+                </div>
+
+                <div class="summary-row">
+                    <div class="summary-label">
+                        <i class="bi bi-wallet2"></i>
+                        Payment Method
+                    </div>
+                    <div class="summary-value">
+                        {% if payment.payment_method == 'mpesa' %}
+                            M-Pesa
+                        {% elif payment.payment_method == 'card' %}
+                            Card Payment
+                        {% else %}
+                            Cash on Delivery
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="summary-row">
+                    <div class="summary-label">
+                        <i class="bi bi-clock-history"></i>
+                        Order Date
+                    </div>
+                    <div class="summary-value">{{ order.created_at|date:"d M, Y - h:i A" }}</div>
+                </div>
+
+                <div class="summary-row">
+                    <div class="summary-label">
+                        <i class="bi bi-tag"></i>
+                        Status
+                    </div>
+                    <div class="summary-value">
+                        <span class="status-badge">
+                            <i class="bi bi-check-circle"></i>
+                            {{ order.get_status_display }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="summary-row">
+                    <div class="summary-label">Total Amount</div>
+                    <div class="summary-value" style="color: #f68b1e; font-size: 20px;">
+                        KSh {{ order.total|floatformat:2 }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Details -->
+            <div class="order-details">
+                <!-- Delivery Information -->
+                <div class="detail-card">
+                    <div class="detail-header">
+                        <div class="detail-icon">
+                            <i class="bi bi-truck"></i>
+                        </div>
+                        <div class="detail-title">Delivery Information</div>
+                    </div>
+                    <div class="detail-content">
+                        {% if order.delivery_method == 'home_delivery' %}
+                            <div class="detail-item">
+                                <strong>Delivery Method:</strong> Door Delivery
+                            </div>
+                            {% if order.delivery_address %}
+                                <div class="detail-item">
+                                    <strong>Delivery Address:</strong> 
+                                    {{ order.delivery_address.street_address }}, 
+                                    {{ order.delivery_address.area }}, 
+                                    {{ order.delivery_address.city }}, 
+                                    {{ order.delivery_address.region }}
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Contact:</strong> 
+                                    {{ order.delivery_address.full_name }} - 
+                                    +{{ order.delivery_address.phone_number }}
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            <div class="detail-item">
+                                <strong>Delivery Method:</strong> Pickup Station
+                            </div>
+                            {% if order.pickup_station %}
+                                <div class="detail-item">
+                                    <strong>Station:</strong> {{ order.pickup_station.name }}
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Address:</strong> {{ order.pickup_station.address }}
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Operating Hours:</strong> {{ order.pickup_station.operating_hours }}
+                                </div>
+                            {% endif %}
+                        {% endif %}
+                        
+                        <div class="detail-item">
+                            <strong>Delivery Fee:</strong> KSh {{ order.delivery_fee|floatformat:2 }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order Items -->
+                <div class="detail-card">
+                    <div class="detail-header">
+                        <div class="detail-icon">
+                            <i class="bi bi-bag-check"></i>
+                        </div>
+                        <div class="detail-title">Order Items ({{ order.items.count }})</div>
+                    </div>
+                    <div class="detail-content">
+                        {% for item in order.items.all %}
+                        <div class="detail-item">
+                            <strong>{{ item.quantity }}x</strong> {{ item.product_name }}
+                            {% if item.variant_name %}
+                                ({{ item.variant_name }})
+                            {% endif %}
+                            - <span style="color: #f68b1e;">KSh {{ item.total|floatformat:2 }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Payment Summary -->
+                <div class="detail-card">
+                    <div class="detail-header">
+                        <div class="detail-icon">
+                            <i class="bi bi-calculator"></i>
+                        </div>
+                        <div class="detail-title">Payment Summary</div>
+                    </div>
+                    <div class="detail-content">
+                        <div class="detail-item">
+                            <strong>Subtotal:</strong> KSh {{ order.subtotal|floatformat:2 }}
+                        </div>
+                        <div class="detail-item">
+                            <strong>Delivery Fee:</strong> KSh {{ order.delivery_fee|floatformat:2 }}
+                        </div>
+                        {% if order.discount > 0 %}
+                        <div class="detail-item">
+                            <strong>Discount:</strong> 
+                            <span style="color: #28a745;">-KSh {{ order.discount|floatformat:2 }}</span>
+                        </div>
+                        {% endif %}
+                        <div class="detail-item" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #f0f0f0;">
+                            <strong style="font-size: 16px;">Total Paid:</strong> 
+                            <span style="color: #f68b1e; font-size: 16px; font-weight: bold;">
+                                KSh {{ order.total|floatformat:2 }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Info Box -->
+            <div class="info-box">
+                <p>
+                    <i class="bi bi-info-circle-fill"></i>
+                    <strong>What's Next?</strong> You will receive an email confirmation shortly. 
+                    Track your order status in your account dashboard. For any inquiries, contact our customer service.
+                </p>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <a href="{% url 'order_detail' order.id %}" class="btn btn-primary">
+                    <i class="bi bi-eye"></i>
+                    View Order Details
+                </a>
+                <a href="{% url 'home' %}" class="btn btn-outline">
+                    <i class="bi bi-house"></i>
+                    Continue Shopping
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Optional: Print receipt function
+    function printReceipt() {
+        window.print();
+    }
+
+    // Optional: Confetti animation on load
+    window.addEventListener('load', function() {
+        console.log('Payment successful!');
+    });
+</script>
+{% endblock %}

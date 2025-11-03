@@ -750,36 +750,6 @@ def category_view(request, category):
     return render(request, 'e_commerce/category.html', context)
 
 
-@login_required
-def account(request):
-    """User account dashboard"""
-    user = request.user
-    
-    # Get user's recent orders
-    recent_orders = Order.objects.filter(
-        user=user
-    ).select_related('delivery_address', 'pickup_station').order_by('-created_at')[:5]
-    
-    # Get user's addresses
-    addresses = Address.objects.filter(user=user).order_by('-is_default', '-created_at')
-    
-    # Get wishlist count
-    wishlist_count = Wishlist.objects.filter(user=user).count()
-    
-    # Get pending orders count
-    pending_orders = Order.objects.filter(
-        user=user, 
-        status__in=['pending', 'confirmed', 'processing']
-    ).count()
-    
-    context = {
-        'recent_orders': recent_orders,
-        'addresses': addresses,
-        'wishlist_count': wishlist_count,
-        'pending_orders': pending_orders,
-    }
-    
-    return render(request, 'e_commerce/account.html', context)
 
 
 def cart(request):
@@ -1359,11 +1329,9 @@ def cart_view(request):
     # Calculate totals
     subtotal = cart.subtotal
     
-    # Delivery fee (simplified - you might want to calculate based on location)
-    delivery_fee = Decimal('200.00') if cart_items.exists() else Decimal('0.00')
     
     # Total
-    total = subtotal + delivery_fee
+    total = subtotal 
     
     # Get recently viewed products (from session or cookie)
     recently_viewed_ids = request.session.get('recently_viewed', [])
@@ -1397,7 +1365,6 @@ def cart_view(request):
         'cart': cart,
         'cart_items': cart_items,
         'subtotal': subtotal,
-        'delivery_fee': delivery_fee,
         'total': total,
         'recently_viewed': recently_viewed,
         'similar_products': similar_products,
@@ -1661,7 +1628,7 @@ def checkout(request):
         delivery_fee = delivery_zone.delivery_fee if delivery_zone else Decimal('300.00')
     else:
         # Pickup station default fee
-        delivery_fee = Decimal('150.00')
+        delivery_fee = Decimal('0.00')
     
     # Get applied coupon from session
     coupon_code = request.session.get('coupon_code')
@@ -1888,158 +1855,6 @@ def apply_coupon(request):
             }, status=400)
     
     return JsonResponse({'error': 'Invalid request'}, status=400)
-
-
-@login_required
-def place_order(request):
-    """Place order and create payment"""
-    if request.method == 'POST':
-        try:
-            with transaction.atomic():
-                # Get cart
-                cart = Cart.objects.get(user=request.user)
-                cart_items = cart.items.select_related('product', 'variant').all()
-                
-                if not cart_items.exists():
-                    messages.error(request, 'Your cart is empty')
-                    return redirect('cart')
-                
-                # Get delivery details
-                delivery_method = request.session.get('delivery_method', 'pickup_station')
-                
-                delivery_address = None
-                pickup_station = None
-                
-                if delivery_method == 'home_delivery':
-                    address_id = request.session.get('delivery_address_id')
-                    if address_id:
-                        delivery_address = get_object_or_404(Address, id=address_id, user=request.user)
-                    else:
-                        messages.error(request, 'Please select a delivery address')
-                        return redirect('checkout')
-                else:
-                    station_id = request.session.get('pickup_station_id')
-                    if station_id:
-                        pickup_station = get_object_or_404(PickupStation, id=station_id, is_active=True)
-                    else:
-                        # Use first available station as default
-                        pickup_station = PickupStation.objects.filter(is_active=True).first()
-                
-                # Calculate amounts
-                subtotal = cart.subtotal
-                
-                if delivery_method == 'home_delivery' and delivery_address:
-                    delivery_zone = DeliveryZone.objects.filter(
-                        region=delivery_address.region,
-                        city=delivery_address.city,
-                        is_active=True
-                    ).first()
-                    delivery_fee = delivery_zone.delivery_fee if delivery_zone else Decimal('300.00')
-                else:
-                    delivery_fee = Decimal('150.00')
-                
-                # Apply discount
-                discount = Decimal('0.00')
-                coupon_code = request.session.get('coupon_code', '')
-                
-                if coupon_code:
-                    try:
-                        coupon = Coupon.objects.get(
-                            code=coupon_code,
-                            is_active=True,
-                            valid_from__lte=timezone.now(),
-                            valid_to__gte=timezone.now()
-                        )
-                        if subtotal >= coupon.minimum_purchase:
-                            if coupon.discount_type == 'percentage':
-                                discount = (subtotal * coupon.discount_value) / 100
-                                if coupon.maximum_discount:
-                                    discount = min(discount, coupon.maximum_discount)
-                            else:
-                                discount = coupon.discount_value
-                            
-                            # Increment usage count
-                            coupon.usage_count += 1
-                            coupon.save()
-                    except Coupon.DoesNotExist:
-                        pass
-                
-                total = subtotal + delivery_fee - discount
-                
-                # Create order
-                order = Order.objects.create(
-                    user=request.user,
-                    status='pending',
-                    delivery_method=delivery_method,
-                    delivery_address=delivery_address,
-                    pickup_station=pickup_station,
-                    subtotal=subtotal,
-                    delivery_fee=delivery_fee,
-                    discount=discount,
-                    total=total,
-                    customer_note=f'Coupon: {coupon_code}' if coupon_code else ''
-                )
-                
-                # Create order items and update stock
-                for cart_item in cart_items:
-                    # Check stock
-                    if cart_item.product.stock < cart_item.quantity:
-                        raise Exception(f'Insufficient stock for {cart_item.product.name}')
-                    
-                    # Create order item
-                    OrderItem.objects.create(
-                        order=order,
-                        product=cart_item.product,
-                        variant=cart_item.variant,
-                        vendor=cart_item.product.vendor,
-                        product_name=cart_item.product.name,
-                        product_sku=cart_item.product.sku,
-                        variant_name=cart_item.variant.name if cart_item.variant else '',
-                        quantity=cart_item.quantity,
-                        price=cart_item.price,
-                        total=cart_item.total_price
-                    )
-                    
-                    # Update stock
-                    cart_item.product.stock -= cart_item.quantity
-                    cart_item.product.total_sales += cart_item.quantity
-                    cart_item.product.save()
-                
-                # Get payment method
-                payment_method = request.POST.get('payment_method', 'mpesa')
-                
-                # Create payment
-                payment = Payment.objects.create(
-                    order=order,
-                    payment_method=payment_method,
-                    amount=total,
-                    status='pending'
-                )
-                
-                # Clear cart
-                cart.items.all().delete()
-                
-                # Clear session data
-                if 'coupon_code' in request.session:
-                    del request.session['coupon_code']
-                if 'delivery_method' in request.session:
-                    del request.session['delivery_method']
-                if 'pickup_station_id' in request.session:
-                    del request.session['pickup_station_id']
-                if 'delivery_address_id' in request.session:
-                    del request.session['delivery_address_id']
-                
-                messages.success(request, f'Order {order.order_number} placed successfully!')
-                
-                # Redirect to payment page
-                return redirect('payment', order_id=order.id)
-                
-        except Exception as e:
-            messages.error(request, str(e))
-            return redirect('payment', order_id=order.id)
-
-    
-    return redirect('checkout')
 
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -2380,7 +2195,7 @@ def payment_failed(request, order_id):
 
 @login_required
 def place_order(request):
-    """Place order and create payment (Updated version)"""
+    """Place order and create payment (Fixed version)"""
     if request.method == 'POST':
         try:
             with transaction.atomic():
@@ -2397,34 +2212,58 @@ def place_order(request):
                 
                 delivery_address = None
                 pickup_station = None
+                delivery_fee = Decimal('0.00')
                 
                 if delivery_method == 'home_delivery':
                     address_id = request.session.get('delivery_address_id')
+                    if not address_id:
+                        # Try to get from POST data
+                        address_id = request.POST.get('delivery_address_id')
+                    
                     if address_id:
                         delivery_address = get_object_or_404(Address, id=address_id, user=request.user)
+                        
+                        # Calculate delivery fee based on address location
+                        delivery_zone = DeliveryZone.objects.filter(
+                            region=delivery_address.region,
+                            city=delivery_address.city,
+                            is_active=True
+                        ).first()
+                        
+                        if delivery_zone:
+                            delivery_fee = delivery_zone.delivery_fee
+                        else:
+                            # Default fee if zone not found
+                            delivery_fee = Decimal('300.00')
+                            messages.warning(
+                                request, 
+                                f'Delivery zone for {delivery_address.city}, {delivery_address.region} not found. Using default fee of KSh 300.'
+                            )
                     else:
                         messages.error(request, 'Please select a delivery address')
                         return redirect('checkout')
-                else:
+                        
+                else:  # pickup_station
                     station_id = request.session.get('pickup_station_id')
+                    if not station_id:
+                        # Try to get from POST data
+                        station_id = request.POST.get('pickup_station_id')
+                    
                     if station_id:
                         pickup_station = get_object_or_404(PickupStation, id=station_id, is_active=True)
+                        # Use pickup station's delivery fee
+                        delivery_fee = pickup_station.delivery_fee
                     else:
                         # Use first available station as default
                         pickup_station = PickupStation.objects.filter(is_active=True).first()
+                        if pickup_station:
+                            delivery_fee = pickup_station.delivery_fee
+                        else:
+                            messages.error(request, 'No pickup stations available')
+                            return redirect('checkout')
                 
                 # Calculate amounts
                 subtotal = cart.subtotal
-                
-                if delivery_method == 'home_delivery' and delivery_address:
-                    delivery_zone = DeliveryZone.objects.filter(
-                        region=delivery_address.region,
-                        city=delivery_address.city,
-                        is_active=True
-                    ).first()
-                    delivery_fee = delivery_zone.delivery_fee if delivery_zone else Decimal('300.00')
-                else:
-                    delivery_fee = Decimal('150.00')
                 
                 # Apply discount
                 discount = Decimal('0.00')
@@ -2438,6 +2277,8 @@ def place_order(request):
                             valid_from__lte=timezone.now(),
                             valid_to__gte=timezone.now()
                         )
+                        
+                        # Validate minimum purchase
                         if subtotal >= coupon.minimum_purchase:
                             if coupon.discount_type == 'percentage':
                                 discount = (subtotal * coupon.discount_value) / 100
@@ -2449,10 +2290,24 @@ def place_order(request):
                             # Increment usage count
                             coupon.usage_count += 1
                             coupon.save()
+                        else:
+                            # Remove invalid coupon
+                            del request.session['coupon_code']
+                            messages.warning(
+                                request, 
+                                f'Coupon requires minimum purchase of KSh {coupon.minimum_purchase}'
+                            )
                     except Coupon.DoesNotExist:
-                        pass
+                        # Remove invalid coupon
+                        if 'coupon_code' in request.session:
+                            del request.session['coupon_code']
                 
                 total = subtotal + delivery_fee - discount
+                
+                # Validate total
+                if total <= 0:
+                    messages.error(request, 'Invalid order total')
+                    return redirect('checkout')
                 
                 # Create order
                 order = Order.objects.create(
@@ -2470,9 +2325,14 @@ def place_order(request):
                 
                 # Create order items and update stock
                 for cart_item in cart_items:
-                    # Check stock
-                    if cart_item.product.stock < cart_item.quantity:
-                        raise Exception(f'Insufficient stock for {cart_item.product.name}')
+                    # Check stock availability
+                    available_stock = cart_item.variant.stock if cart_item.variant else cart_item.product.stock
+                    
+                    if available_stock < cart_item.quantity:
+                        raise Exception(
+                            f'Insufficient stock for {cart_item.product.name}. '
+                            f'Only {available_stock} available.'
+                        )
                     
                     # Create order item
                     OrderItem.objects.create(
@@ -2489,12 +2349,21 @@ def place_order(request):
                     )
                     
                     # Update stock
+                    if cart_item.variant:
+                        cart_item.variant.stock -= cart_item.quantity
+                        cart_item.variant.save()
+                    
                     cart_item.product.stock -= cart_item.quantity
                     cart_item.product.total_sales += cart_item.quantity
                     cart_item.product.save()
                 
                 # Get payment method
                 payment_method = request.POST.get('payment_method', 'mpesa')
+                
+                # Validate payment method
+                valid_payment_methods = ['mpesa', 'card', 'cash']
+                if payment_method not in valid_payment_methods:
+                    payment_method = 'mpesa'
                 
                 # Create payment
                 payment = Payment.objects.create(
@@ -2508,24 +2377,36 @@ def place_order(request):
                 cart.items.all().delete()
                 
                 # Clear session data
-                if 'coupon_code' in request.session:
-                    del request.session['coupon_code']
-                if 'delivery_method' in request.session:
-                    del request.session['delivery_method']
-                if 'pickup_station_id' in request.session:
-                    del request.session['pickup_station_id']
-                if 'delivery_address_id' in request.session:
-                    del request.session['delivery_address_id']
+                session_keys_to_clear = [
+                    'coupon_code',
+                    'delivery_method',
+                    'pickup_station_id',
+                    'delivery_address_id'
+                ]
                 
-                messages.success(request, f'Order {order.order_number} placed successfully!')
+                for key in session_keys_to_clear:
+                    if key in request.session:
+                        del request.session[key]
+                
+                # Save session
+                request.session.modified = True
+                
+                messages.success(
+                    request, 
+                    f'Order {order.order_number} placed successfully! Total: KSh {total}'
+                )
                 
                 # Redirect to payment page
                 return redirect('payment_page', order_id=order.id)
                 
+        except Cart.DoesNotExist:
+            messages.error(request, 'Your cart is empty')
+            return redirect('cart')
         except Exception as e:
-            messages.error(request, str(e))
+            messages.error(request, f'Error placing order: {str(e)}')
             return redirect('checkout')
     
+    # If not POST, redirect to checkout
     return redirect('checkout')
 
 
@@ -2785,3 +2666,357 @@ def track_order(request, order_id):
         })
     
     return redirect('order_detail', order_id=order.id)
+
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.db.models import Count, Sum, Q
+from .models import User, Address, Order, Review, Wishlist, Notification
+import json
+
+
+@login_required
+def account_overview(request):
+    """Main account overview page"""
+    user = request.user
+    
+    # Get statistics
+    orders_count = Order.objects.filter(user=user).count()
+    pending_orders = Order.objects.filter(user=user, status='pending').count()
+    wishlist_count = Wishlist.objects.filter(user=user).count()
+    
+    # Get recent orders
+    recent_orders = Order.objects.filter(user=user).order_by('-created_at')[:5]
+    
+    # Get default address
+    default_address = Address.objects.filter(user=user, is_default=True).first()
+    
+    context = {
+        'orders_count': orders_count,
+        'pending_orders': pending_orders,
+        'wishlist_count': wishlist_count,
+        'recent_orders': recent_orders,
+        'default_address': default_address,
+    }
+    
+    return render(request, 'account/overview.html', context)
+
+
+@login_required
+def account_orders(request):
+    """User orders page"""
+    orders = Order.objects.filter(user=request.user).order_by('-created_at')
+    
+    context = {
+        'orders': orders,
+    }
+    
+    return render(request, 'account/orders.html', context)
+
+
+@login_required
+def account_inbox(request):
+    """User notifications/inbox"""
+    notifications = Notification.objects.filter(user=request.user).order_by('-created_at')
+    unread_count = notifications.filter(is_read=False).count()
+    
+    context = {
+        'notifications': notifications,
+        'unread_count': unread_count,
+    }
+    
+    return render(request, 'account/inbox.html', context)
+
+
+@login_required
+def account_reviews(request):
+    """Pending reviews page"""
+    # Get orders that can be reviewed (delivered orders)
+    delivered_orders = Order.objects.filter(
+        user=request.user,
+        status='delivered'
+    ).prefetch_related('items__product')
+    
+    # Get already reviewed products
+    reviewed_products = Review.objects.filter(user=request.user).values_list('product_id', flat=True)
+    
+    context = {
+        'delivered_orders': delivered_orders,
+        'reviewed_products': list(reviewed_products),
+    }
+    
+    return render(request, 'account/reviews.html', context)
+
+
+@login_required
+def account_wishlist(request):
+    """User wishlist"""
+    wishlist_items = Wishlist.objects.filter(user=request.user).select_related('product')
+    
+    context = {
+        'wishlist_items': wishlist_items,
+    }
+    
+    return render(request, 'account/wishlist.html', context)
+
+
+@login_required
+def account_followed_sellers(request):
+    """Followed sellers page - placeholder for future implementation"""
+    context = {}
+    return render(request, 'account/followed_sellers.html', context)
+
+
+@login_required
+def account_recently_viewed(request):
+    """Recently viewed products - can be implemented with sessions"""
+    context = {}
+    return render(request, 'account/recently_viewed.html', context)
+
+
+@login_required
+def account_settings(request):
+    """Account settings page"""
+    if request.method == 'POST':
+        user = request.user
+        user.first_name = request.POST.get('first_name', '')
+        user.last_name = request.POST.get('last_name', '')
+        user.phone_number = request.POST.get('phone_number', '')
+        user.date_of_birth = request.POST.get('date_of_birth', None)
+        user.save()
+        
+        messages.success(request, 'Account details updated successfully')
+        return redirect('account_settings')
+    
+    return render(request, 'account/settings.html')
+
+
+@login_required
+def account_address_book(request):
+    """Address book page"""
+    addresses = Address.objects.filter(user=request.user).order_by('-is_default', '-created_at')
+    
+    context = {
+        'addresses': addresses,
+    }
+    
+    return render(request, 'account/address_book.html', context)
+
+
+@login_required
+def account_newsletter(request):
+    """Newsletter preferences"""
+    return render(request, 'account/newsletter.html')
+
+
+# AJAX API Endpoints
+
+@login_required
+@require_http_methods(["POST"])
+def api_add_address(request):
+    """Add new address via AJAX"""
+    try:
+        data = json.loads(request.body)
+        
+        # Validate required fields
+        required_fields = ['full_name', 'phone_number', 'region', 'city', 'area', 'street_address']
+        for field in required_fields:
+            if not data.get(field):
+                return JsonResponse({'error': f'{field} is required'}, status=400)
+        
+        # If this is set as default, unset other defaults
+        if data.get('is_default', False):
+            Address.objects.filter(user=request.user, is_default=True).update(is_default=False)
+        
+        # Create address
+        address = Address.objects.create(
+            user=request.user,
+            address_type=data.get('address_type', 'home'),
+            full_name=data['full_name'],
+            phone_number=data['phone_number'],
+            region=data['region'],
+            city=data['city'],
+            area=data['area'],
+            street_address=data['street_address'],
+            additional_info=data.get('additional_info', ''),
+            is_default=data.get('is_default', False)
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Address added successfully',
+            'address': {
+                'id': address.id,
+                'full_name': address.full_name,
+                'phone_number': address.phone_number,
+                'address_type': address.address_type,
+                'region': address.region,
+                'city': address.city,
+                'area': address.area,
+                'street_address': address.street_address,
+                'additional_info': address.additional_info,
+                'is_default': address.is_default,
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_get_address(request, address_id):
+    """Get address details via AJAX"""
+    try:
+        address = get_object_or_404(Address, id=address_id, user=request.user)
+        
+        return JsonResponse({
+            'success': True,
+            'address': {
+                'id': address.id,
+                'full_name': address.full_name,
+                'phone_number': address.phone_number,
+                'address_type': address.address_type,
+                'region': address.region,
+                'city': address.city,
+                'area': address.area,
+                'street_address': address.street_address,
+                'additional_info': address.additional_info,
+                'is_default': address.is_default,
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=404)
+
+
+@login_required
+@require_http_methods(["PUT", "POST"])
+def api_update_address(request, address_id):
+    """Update address via AJAX"""
+    try:
+        address = get_object_or_404(Address, id=address_id, user=request.user)
+        data = json.loads(request.body)
+        
+        # Update fields
+        address.full_name = data.get('full_name', address.full_name)
+        address.phone_number = data.get('phone_number', address.phone_number)
+        address.address_type = data.get('address_type', address.address_type)
+        address.region = data.get('region', address.region)
+        address.city = data.get('city', address.city)
+        address.area = data.get('area', address.area)
+        address.street_address = data.get('street_address', address.street_address)
+        address.additional_info = data.get('additional_info', address.additional_info)
+        
+        # Handle default address
+        if data.get('is_default', False):
+            Address.objects.filter(user=request.user, is_default=True).update(is_default=False)
+            address.is_default = True
+        
+        address.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Address updated successfully',
+            'address': {
+                'id': address.id,
+                'full_name': address.full_name,
+                'phone_number': address.phone_number,
+                'address_type': address.address_type,
+                'region': address.region,
+                'city': address.city,
+                'area': address.area,
+                'street_address': address.street_address,
+                'additional_info': address.additional_info,
+                'is_default': address.is_default,
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
+@login_required
+@require_http_methods(["DELETE", "POST"])
+def api_delete_address(request, address_id):
+    """Delete address via AJAX"""
+    try:
+        address = get_object_or_404(Address, id=address_id, user=request.user)
+        
+        # Don't allow deleting default address if it's the only one
+        if address.is_default and Address.objects.filter(user=request.user).count() > 1:
+            # Set another address as default
+            next_address = Address.objects.filter(user=request.user).exclude(id=address_id).first()
+            if next_address:
+                next_address.is_default = True
+                next_address.save()
+        
+        address.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Address deleted successfully'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_set_default_address(request, address_id):
+    """Set address as default via AJAX"""
+    try:
+        address = get_object_or_404(Address, id=address_id, user=request.user)
+        
+        # Unset all other defaults
+        Address.objects.filter(user=request.user, is_default=True).update(is_default=False)
+        
+        # Set this as default
+        address.is_default = True
+        address.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Default address updated'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_mark_notification_read(request, notification_id):
+    """Mark notification as read"""
+    try:
+        notification = get_object_or_404(Notification, id=notification_id, user=request.user)
+        notification.is_read = True
+        notification.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Notification marked as read'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_mark_all_notifications_read(request):
+    """Mark all notifications as read"""
+    try:
+        Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'All notifications marked as read'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)

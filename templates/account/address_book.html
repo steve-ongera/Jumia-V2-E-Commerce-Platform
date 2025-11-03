@@ -1,0 +1,825 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Address Book - Jumia Kenya{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+<style>
+    /* Include all the styles from overview.html for sidebar */
+    .account-page { background: #f5f5f5; min-height: 100vh; padding: 20px 0; }
+    .account-container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+    .account-layout { display: grid; grid-template-columns: 260px 1fr; gap: 20px; }
+
+    /* Sidebar Styles */
+    .account-sidebar { background: white; border-radius: 4px; overflow: hidden; }
+    .sidebar-header { padding: 20px; border-bottom: 1px solid #f0f0f0; }
+    .user-info { display: flex; align-items: center; gap: 12px; }
+    .user-avatar { width: 50px; height: 50px; border-radius: 50%; background: #f68b1e; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; font-weight: bold; }
+    .user-details h3 { font-size: 16px; color: #282828; margin-bottom: 3px; }
+    .user-details p { font-size: 13px; color: #999; }
+    .sidebar-menu { list-style: none; }
+    .menu-item { border-bottom: 1px solid #f0f0f0; }
+    .menu-link { display: flex; align-items: center; gap: 12px; padding: 15px 20px; color: #666; text-decoration: none; transition: all 0.3s; }
+    .menu-link:hover { background: #feefea; color: #f68b1e; }
+    .menu-link.active { background: #feefea; color: #f68b1e; border-left: 3px solid #f68b1e; }
+    .menu-icon { font-size: 18px; width: 20px; }
+    .menu-text { flex: 1; font-size: 14px; }
+    .menu-divider { height: 8px; background: #f5f5f5; }
+    .logout-link { color: #dc3545; }
+    .logout-link:hover { background: #fff5f5; color: #dc3545; }
+
+    /* Main Content */
+    .account-content { background: white; border-radius: 4px; padding: 30px; }
+    .content-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+    .content-title { font-size: 24px; font-weight: bold; color: #282828; }
+    .add-address-btn { padding: 12px 25px; background: #f68b1e; color: white; border: none; border-radius: 4px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.3s; }
+    .add-address-btn:hover { background: #e67e0f; }
+
+    /* Address Grid */
+    .address-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+
+    .address-card {
+        border: 2px solid #f0f0f0;
+        border-radius: 6px;
+        padding: 20px;
+        position: relative;
+        transition: all 0.3s;
+    }
+
+    .address-card.default {
+        border-color: #f68b1e;
+        background: #feefea;
+    }
+
+    .address-card:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .address-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 15px;
+    }
+
+    .address-type {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 10px;
+        background: #e7f5ff;
+        color: #1c7ed6;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .address-type.home {
+        background: #e7f5ff;
+        color: #1c7ed6;
+    }
+
+    .address-type.work {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .address-type.other {
+        background: #e0e0e0;
+        color: #666;
+    }
+
+    .default-badge {
+        background: #f68b1e;
+        color: white;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+    .address-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .action-btn {
+        background: none;
+        border: none;
+        color: #666;
+        cursor: pointer;
+        font-size: 18px;
+        padding: 5px;
+        transition: color 0.3s;
+    }
+
+    .action-btn:hover {
+        color: #f68b1e;
+    }
+
+    .action-btn.delete:hover {
+        color: #dc3545;
+    }
+
+    .address-details {
+        font-size: 14px;
+        color: #666;
+        line-height: 1.8;
+    }
+
+    .address-details p {
+        margin: 0;
+    }
+
+    .address-details strong {
+        color: #282828;
+    }
+
+    .address-footer {
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid #f0f0f0;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .set-default-btn {
+        padding: 8px 15px;
+        background: white;
+        color: #f68b1e;
+        border: 1px solid #f68b1e;
+        border-radius: 4px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .set-default-btn:hover {
+        background: #f68b1e;
+        color: white;
+    }
+
+    /* Modal Styles */
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 1000;
+        animation: fadeIn 0.3s;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    .modal.show {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal-content {
+        background: white;
+        border-radius: 8px;
+        width: 90%;
+        max-width: 600px;
+        max-height: 90vh;
+        overflow-y: auto;
+        animation: slideUp 0.3s;
+    }
+
+    @keyframes slideUp {
+        from { transform: translateY(50px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    .modal-header {
+        padding: 20px 25px;
+        border-bottom: 1px solid #f0f0f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-title {
+        font-size: 20px;
+        font-weight: bold;
+        color: #282828;
+    }
+
+    .close-modal {
+        background: none;
+        border: none;
+        font-size: 24px;
+        color: #999;
+        cursor: pointer;
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: all 0.3s;
+    }
+
+    .close-modal:hover {
+        background: #f0f0f0;
+        color: #666;
+    }
+
+    .modal-body {
+        padding: 25px;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 14px;
+        color: #282828;
+        font-weight: 600;
+    }
+
+    .form-label .required {
+        color: #dc3545;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 12px 15px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+        transition: border-color 0.3s;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #f68b1e;
+    }
+
+    .form-select {
+        width: 100%;
+        padding: 12px 15px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+        background: white;
+        cursor: pointer;
+    }
+
+    .form-check {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 15px;
+    }
+
+    .form-check input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+
+    .form-check label {
+        font-size: 14px;
+        color: #666;
+        cursor: pointer;
+    }
+
+    .modal-footer {
+        padding: 20px 25px;
+        border-top: 1px solid #f0f0f0;
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+    }
+
+    .btn {
+        padding: 12px 25px;
+        border-radius: 4px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        border: none;
+    }
+
+    .btn-primary {
+        background: #f68b1e;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #e67e0f;
+    }
+
+    .btn-primary:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+    }
+
+    .btn-secondary {
+        background: white;
+        color: #666;
+        border: 1px solid #ddd;
+    }
+
+    .btn-secondary:hover {
+        background: #f9f9f9;
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #999;
+    }
+
+    .empty-state i {
+        font-size: 64px;
+        margin-bottom: 20px;
+        color: #ddd;
+    }
+
+    .empty-state h3 {
+        font-size: 18px;
+        color: #666;
+        margin-bottom: 10px;
+    }
+
+    .empty-state p {
+        font-size: 14px;
+        margin-bottom: 20px;
+    }
+
+    /* Loading Overlay */
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255,255,255,0.8);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+    }
+
+    .loading-overlay.show {
+        display: flex;
+    }
+
+    .spinner {
+        width: 50px;
+        height: 50px;
+        border: 4px solid #f0f0f0;
+        border-top-color: #f68b1e;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+        .account-layout {
+            grid-template-columns: 1fr;
+        }
+        .account-sidebar {
+            display: none;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .address-grid {
+            grid-template-columns: 1fr;
+        }
+        .modal-content {
+            width: 95%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="account-page">
+    <div class="account-container">
+        <div class="account-layout">
+            <!-- Sidebar (same as overview) -->
+            <aside class="account-sidebar">
+                <div class="sidebar-header">
+                    <div class="user-info">
+                        <div class="user-avatar">
+                            {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+                        </div>
+                        <div class="user-details">
+                            <h3>{{ request.user.get_full_name|default:request.user.username }}</h3>
+                            <p>{{ request.user.email }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <ul class="sidebar-menu">
+                    <li class="menu-item">
+                        <a href="{% url 'account_overview' %}" class="menu-link">
+                            <i class="bi bi-person menu-icon"></i>
+                            <span class="menu-text">My Jumia Account</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="{% url 'account_orders' %}" class="menu-link">
+                            <i class="bi bi-box-seam menu-icon"></i>
+                            <span class="menu-text">Orders</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="{% url 'account_inbox' %}" class="menu-link">
+                            <i class="bi bi-envelope menu-icon"></i>
+                            <span class="menu-text">Inbox</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="{% url 'account_wishlist' %}" class="menu-link">
+                            <i class="bi bi-heart menu-icon"></i>
+                            <span class="menu-text">Wishlist</span>
+                        </a>
+                    </li>
+
+                    <li class="menu-divider"></li>
+
+                    <li class="menu-item">
+                        <a href="{% url 'account_settings' %}" class="menu-link">
+                            <span class="menu-text">Account Management</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="{% url 'account_address_book' %}" class="menu-link active">
+                            <span class="menu-text">Address Book</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="{% url 'logout' %}" class="menu-link logout-link">
+                            <span class="menu-text">Logout</span>
+                        </a>
+                    </li>
+                </ul>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="account-content">
+                <div class="content-header">
+                    <h1 class="content-title">Address Book</h1>
+                    <button class="add-address-btn" onclick="openAddressModal()">
+                        <i class="bi bi-plus-lg"></i>
+                        Add New Address
+                    </button>
+                </div>
+
+                <!-- Address Grid -->
+                <div class="address-grid" id="addressGrid">
+                    {% if addresses %}
+                        {% for address in addresses %}
+                        <div class="address-card {% if address.is_default %}default{% endif %}" data-address-id="{{ address.id }}">
+                            <div class="address-header">
+                                <div>
+                                    <span class="address-type {{ address.address_type }}">
+                                        <i class="bi bi-{% if address.address_type == 'home' %}house{% elif address.address_type == 'work' %}briefcase{% else %}geo-alt{% endif %}"></i>
+                                        {{ address.get_address_type_display }}
+                                    </span>
+                                    {% if address.is_default %}
+                                    <span class="default-badge">DEFAULT</span>
+                                    {% endif %}
+                                </div>
+                                <div class="address-actions">
+                                    <button class="action-btn" onclick="editAddress({{ address.id }})" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="action-btn delete" onclick="deleteAddress({{ address.id }})" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="address-details">
+                                <p><strong>{{ address.full_name }}</strong></p>
+                                <p>{{ address.street_address }}</p>
+                                <p>{{ address.area }}, {{ address.city }}</p>
+                                <p>{{ address.region }}</p>
+                                <p>+{{ address.phone_number }}</p>
+                                {% if address.additional_info %}
+                                <p style="margin-top: 10px; font-style: italic;">{{ address.additional_info }}</p>
+                                {% endif %}
+                            </div>
+
+                            {% if not address.is_default %}
+                            <div class="address-footer">
+                                <button class="set-default-btn" onclick="setDefaultAddress({{ address.id }})">
+                                    Set as Default
+                                </button>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state" style="grid-column: 1 / -1;">
+                            <i class="bi bi-geo-alt"></i>
+                            <h3>No Addresses Yet</h3>
+                            <p>Add your first delivery address to make checkout faster</p>
+                            <button class="add-address-btn" onclick="openAddressModal()">
+                                <i class="bi bi-plus-lg"></i>
+                                Add Your First Address
+                            </button>
+                        </div>
+                    {% endif %}
+                </div>
+            </main>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Address Modal -->
+<div class="modal" id="addressModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title" id="modalTitle">Add New Address</h2>
+            <button class="close-modal" onclick="closeAddressModal()">×</button>
+        </div>
+
+        <form id="addressForm">
+            <div class="modal-body">
+                <input type="hidden" id="addressId" name="address_id">
+
+                <div class="form-group">
+                    <label class="form-label">Address Type <span class="required">*</span></label>
+                    <select class="form-select" id="addressType" name="address_type" required>
+                        <option value="home">Home</option>
+                        <option value="work">Work</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Full Name <span class="required">*</span></label>
+                    <input type="text" class="form-control" id="fullName" name="full_name" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Phone Number <span class="required">*</span></label>
+                    <input type="tel" class="form-control" id="phoneNumber" name="phone_number" placeholder="e.g., 0712345678" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Region <span class="required">*</span></label>
+                    <input type="text" class="form-control" id="region" name="region" placeholder="e.g., Nairobi" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">City <span class="required">*</span></label>
+                    <input type="text" class="form-control" id="city" name="city" placeholder="e.g., Nairobi" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Area <span class="required">*</span></label>
+                    <input type="text" class="form-control" id="area" name="area" placeholder="e.g., Westlands" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Street Address <span class="required">*</span></label>
+                    <textarea class="form-control" id="streetAddress" name="street_address" rows="3" required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Additional Information (Optional)</label>
+                    <textarea class="form-control" id="additionalInfo" name="additional_info" rows="2" placeholder="e.g., Apartment number, landmarks"></textarea>
+                </div>
+
+                <div class="form-check">
+                    <input type="checkbox" id="isDefault" name="is_default">
+                    <label for="isDefault">Set as default address</label>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeAddressModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="submitBtn">Save Address</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const csrfToken = '{{ csrf_token }}';
+let isEditMode = false;
+
+// Open modal for adding address
+function openAddressModal() {
+    isEditMode = false;
+    document.getElementById('modalTitle').textContent = 'Add New Address';
+    document.getElementById('addressForm').reset();
+    document.getElementById('addressId').value = '';
+    document.getElementById('addressModal').classList.add('show');
+}
+
+// Open modal for editing address
+async function editAddress(addressId) {
+    isEditMode = true;
+    document.getElementById('modalTitle').textContent = 'Edit Address';
+    
+    try {
+        showLoading();
+        const response = await fetch(`/account/api/address/${addressId}/`, {
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': csrfToken
+            }
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+            const addr = data.address;
+            document.getElementById('addressId').value = addr.id;
+            document.getElementById('addressType').value = addr.address_type;
+            document.getElementById('fullName').value = addr.full_name;
+            document.getElementById('phoneNumber').value = addr.phone_number;
+            document.getElementById('region').value = addr.region;
+            document.getElementById('city').value = addr.city;
+            document.getElementById('area').value = addr.area;
+            document.getElementById('streetAddress').value = addr.street_address;
+            document.getElementById('additionalInfo').value = addr.additional_info;
+            document.getElementById('isDefault').checked = addr.is_default;
+            
+            document.getElementById('addressModal').classList.add('show');
+        } else {
+            alert('Error loading address');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error loading address');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Close modal
+function closeAddressModal() {
+    document.getElementById('addressModal').classList.remove('show');
+}
+
+// Submit form
+document.getElementById('addressForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const data = {
+        address_type: formData.get('address_type'),
+        full_name: formData.get('full_name'),
+        phone_number: formData.get('phone_number'),
+        region: formData.get('region'),
+        city: formData.get('city'),
+        area: formData.get('area'),
+        street_address: formData.get('street_address'),
+        additional_info: formData.get('additional_info'),
+        is_default: document.getElementById('isDefault').checked
+    };
+
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Saving...';
+
+    try {
+        let url, method;
+        if (isEditMode) {
+            const addressId = document.getElementById('addressId').value;
+            url = `/account/api/address/${addressId}/update/`;
+            method = 'POST';
+        } else {
+            url = '/account/api/address/add/';
+            method = 'POST';
+        }
+
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            alert(result.message);
+            closeAddressModal();
+            location.reload(); // Refresh to show updated addresses
+        } else {
+            alert(result.error || 'Error saving address');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error saving address');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Save Address';
+    }
+});
+
+// Delete address
+async function deleteAddress(addressId) {
+    if (!confirm('Are you sure you want to delete this address?')) {
+        return;
+    }
+
+    try {
+        showLoading();
+        const response = await fetch(`/account/api/address/${addressId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert(data.error || 'Error deleting address');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error deleting address');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Set default address
+async function setDefaultAddress(addressId) {
+    try {
+        showLoading();
+        const response = await fetch(`/account/api/address/${addressId}/set-default/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.error || 'Error setting default address');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error setting default address');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Loading helpers
+function showLoading() {
+    document.getElementById('loadingOverlay').classList.add('show');
+}
+
+function hideLoading() {
+    document.getElementById('loadingOverlay').classList.remove('show');
+}
+
+// Close modal on outside click
+document.getElementById('addressModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeAddressModal();
+    }
+});
+</script>
+{% endblock %}

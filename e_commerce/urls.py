@@ -4,7 +4,30 @@ from e_commerce import views
 urlpatterns = [
     path('', views.home, name='home'),
     path('search/', views.search, name='search'),
-    path('account/', views.account, name='account'),
+    
+    # Main account pages
+    path('account/', views.account_overview, name='account_overview'),
+    path('orders/', views.account_orders, name='account_orders'),
+    path('inbox/', views.account_inbox, name='account_inbox'),
+    path('reviews/', views.account_reviews, name='account_reviews'),
+    path('wishlist/', views.account_wishlist, name='account_wishlist'),
+    path('followed-sellers/', views.account_followed_sellers, name='account_followed_sellers'),
+    path('recently-viewed/', views.account_recently_viewed, name='account_recently_viewed'),
+    path('settings/', views.account_settings, name='account_settings'),
+    path('address-book/', views.account_address_book, name='account_address_book'),
+    path('newsletter/', views.account_newsletter, name='account_newsletter'),
+    
+    # AJAX API endpoints for addresses
+    path('api/address/add/', views.api_add_address, name='api_add_address'),
+    path('api/address/<int:address_id>/', views.api_get_address, name='api_get_address'),
+    path('api/address/<int:address_id>/update/', views.api_update_address, name='api_update_address'),
+    path('api/address/<int:address_id>/delete/', views.api_delete_address, name='api_delete_address'),
+    path('api/address/<int:address_id>/set-default/', views.api_set_default_address, name='api_set_default_address'),
+    
+    # AJAX API endpoints for notifications
+    path('api/notification/<int:notification_id>/read/', views.api_mark_notification_read, name='api_mark_notification_read'),
+    path('api/notifications/read-all/', views.api_mark_all_notifications_read, name='api_mark_all_notifications_read'),
+
    
     path('wishlist/', views.wishlist, name='wishlist'),
     path('orders/', views.orders, name='orders'),

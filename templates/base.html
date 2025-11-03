@@ -1,9 +1,11 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Jumia Kenya - Online Shopping{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <meta name="description" content="Shop online for Electronics, Phones, Fashion, Health & Beauty, Home & Kitchen and more on Jumia Kenya">
+    <title>{% block title %}Jumia Kenya - Online Shopping for Electronics, Phones, Fashion & More{% endblock %}</title>
     
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
@@ -22,6 +24,9 @@
             line-height: 1.5;
             color: #282828;
             background-color: #f5f5f5;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
         
         a {
@@ -50,6 +55,11 @@
             color: #fff;
             margin-left: 20px;
             transition: opacity 0.2s;
+            white-space: nowrap;
+        }
+        
+        .top-header a:first-child {
+            margin-left: 0;
         }
         
         .top-header a:hover {
@@ -61,6 +71,12 @@
             font-size: 12px;
         }
         
+        .top-header .left,
+        .top-header .right {
+            display: flex;
+            align-items: center;
+        }
+        
         /* Main Header */
         .main-header {
             background-color: #fff;
@@ -69,6 +85,7 @@
             position: sticky;
             top: 0;
             z-index: 1000;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
         
         .main-header .container {
@@ -86,10 +103,21 @@
             color: #f68b1e;
             display: flex;
             align-items: center;
+            flex-shrink: 0;
         }
         
-        .logo img {
-            height: 35px;
+        .logo-text {
+            font-size: 28px;
+            font-weight: 900;
+        }
+        
+        .logo-badge {
+            font-size: 10px;
+            background: #f68b1e;
+            color: #fff;
+            padding: 2px 4px;
+            border-radius: 3px;
+            margin-left: 3px;
         }
         
         /* Search Bar */
@@ -103,6 +131,11 @@
             border: 1px solid #f68b1e;
             border-radius: 4px;
             overflow: hidden;
+            transition: box-shadow 0.2s;
+        }
+        
+        .search-form:focus-within {
+            box-shadow: 0 0 0 3px rgba(246, 139, 30, 0.1);
         }
         
         .search-form input {
@@ -111,17 +144,26 @@
             padding: 10px 15px;
             font-size: 13px;
             outline: none;
+            min-width: 0;
+        }
+        
+        .search-form input::placeholder {
+            color: #999;
         }
         
         .search-form button {
             background-color: #f68b1e;
             color: #fff;
             border: none;
-            padding: 10px 25px;
+            padding: 10px 20px;
             cursor: pointer;
             font-size: 13px;
             font-weight: 500;
             transition: background-color 0.2s;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
         
         .search-form button:hover {
@@ -133,21 +175,26 @@
             display: flex;
             align-items: center;
             gap: 20px;
+            flex-shrink: 0;
         }
-        
+
         .header-action {
+            position: relative;
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 6px;
+            font-size: 14px;
+            color: #222;
+            text-decoration: none;
             cursor: pointer;
             transition: color 0.2s;
-            position: relative;
+            white-space: nowrap;
         }
         
         .header-action:hover {
             color: #f68b1e;
         }
-        
+
         .header-action i {
             font-size: 20px;
         }
@@ -156,7 +203,98 @@
             font-size: 12px;
             font-weight: 500;
         }
+
+        /* Dropdown Wrapper */
+        .dropdown {
+            position: relative;
+        }
+
+        /* Dropdown Link */
+        .account-toggle {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Dropdown Icon */
+        .dropdown-icon {
+            font-size: 10px;
+            margin-left: 2px;
+            transition: transform 0.2s;
+        }
         
+        .dropdown.open .dropdown-icon {
+            transform: rotate(180deg);
+        }
+
+        /* Dropdown Menu */
+        .dropdown-menu {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            min-width: 200px;
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            list-style: none;
+            padding: 8px 0;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.2s ease;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        /* Dropdown items */
+        .dropdown-menu li {
+            width: 100%;
+        }
+
+        .dropdown-menu a {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 15px;
+            font-size: 13px;
+            color: #333;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .dropdown-menu a i {
+            font-size: 16px;
+            width: 18px;
+        }
+
+        .dropdown-menu a:hover {
+            background: #f8f8f8;
+            color: #f68b1e;
+        }
+
+        /* Divider */
+        .dropdown-menu .divider {
+            border-top: 1px solid #e8e8e8;
+            margin: 5px 0;
+        }
+
+        /* Show dropdown on hover for desktop */
+        @media (min-width: 769px) {
+            .dropdown:hover .dropdown-menu {
+                opacity: 1;
+                visibility: visible;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Show dropdown with open class (for mobile) */
+        .dropdown.open .dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        /* Cart badge */
         .cart-badge {
             position: absolute;
             top: -5px;
@@ -164,13 +302,14 @@
             background-color: #f68b1e;
             color: #fff;
             border-radius: 50%;
-            width: 18px;
+            min-width: 18px;
             height: 18px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 10px;
             font-weight: bold;
+            padding: 0 4px;
         }
         
         /* Mobile Menu Toggle */
@@ -178,6 +317,8 @@
             display: none;
             font-size: 24px;
             cursor: pointer;
+            padding: 5px;
+            color: #333;
         }
         
         /* Navigation */
@@ -197,23 +338,34 @@
             display: flex;
             list-style: none;
             gap: 0;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+        
+        .nav-menu::-webkit-scrollbar {
+            display: none;
         }
         
         .nav-menu li {
             position: relative;
+            flex-shrink: 0;
         }
         
-        .nav-menu a {
-            display: block;
+        .nav-menu > li > a {
+            display: flex;
+            align-items: center;
             padding: 12px 15px;
             font-size: 12px;
             font-weight: 500;
             color: #282828;
-            transition: background-color 0.2s;
+            transition: all 0.2s;
+            white-space: nowrap;
         }
         
-        .nav-menu a:hover {
+        .nav-menu > li > a:hover {
             background-color: #f5f5f5;
+            color: #f68b1e;
         }
         
         .nav-menu i {
@@ -221,30 +373,37 @@
             font-size: 14px;
         }
         
-        /* Dropdown */
-        .dropdown-menu {
+        /* Category Dropdown */
+        .nav-menu .dropdown-menu {
             display: none;
             position: absolute;
             top: 100%;
             left: 0;
             background-color: #fff;
             border: 1px solid #e0e0e0;
-            border-top: none;
-            min-width: 200px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-top: 2px solid #f68b1e;
+            min-width: 220px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             z-index: 1000;
+            max-height: 400px;
+            overflow-y: auto;
+            opacity: 1;
+            visibility: visible;
+            transform: none;
+            padding: 5px 0;
         }
         
-        .nav-menu li:hover .dropdown-menu {
+        .nav-menu li:hover > .dropdown-menu {
             display: block;
         }
         
-        .dropdown-menu a {
+        .nav-menu .dropdown-menu a {
             border-bottom: 1px solid #f5f5f5;
             padding: 10px 15px;
+            display: block;
         }
         
-        .dropdown-menu a:last-child {
+        .nav-menu .dropdown-menu a:last-child {
             border-bottom: none;
         }
         
@@ -252,14 +411,16 @@
         .mobile-sidebar {
             position: fixed;
             top: 0;
-            left: -280px;
+            left: -300px;
             width: 280px;
+            max-width: 85vw;
             height: 100vh;
             background-color: #fff;
             box-shadow: 2px 0 8px rgba(0,0,0,0.1);
-            transition: left 0.3s;
+            transition: left 0.3s ease;
             z-index: 2000;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
         
         .mobile-sidebar.active {
@@ -273,11 +434,20 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .sidebar-header strong {
+            font-size: 16px;
         }
         
         .sidebar-close {
-            font-size: 24px;
+            font-size: 28px;
             cursor: pointer;
+            padding: 5px;
+            line-height: 1;
         }
         
         .sidebar-menu {
@@ -285,15 +455,28 @@
         }
         
         .sidebar-menu a {
-            display: block;
-            padding: 12px 15px;
+            display: flex;
+            align-items: center;
+            padding: 14px 15px;
             border-bottom: 1px solid #f5f5f5;
             font-size: 13px;
+            transition: background-color 0.2s;
+        }
+        
+        .sidebar-menu a:hover {
+            background-color: #f8f8f8;
         }
         
         .sidebar-menu i {
-            margin-right: 10px;
+            margin-right: 12px;
             width: 20px;
+            font-size: 16px;
+            color: #f68b1e;
+        }
+        
+        .sidebar-divider {
+            border-bottom: 2px solid #e8e8e8;
+            margin: 10px 0;
         }
         
         .mobile-overlay {
@@ -305,10 +488,13 @@
             height: 100vh;
             background-color: rgba(0,0,0,0.5);
             z-index: 1999;
+            opacity: 0;
+            transition: opacity 0.3s;
         }
         
         .mobile-overlay.active {
             display: block;
+            opacity: 1;
         }
         
         /* Main Content */
@@ -316,6 +502,7 @@
             max-width: 1200px;
             margin: 20px auto;
             padding: 0 15px;
+            flex: 1;
         }
         
         /* Footer */
@@ -345,6 +532,7 @@
             font-weight: 600;
             margin-bottom: 15px;
             color: #f68b1e;
+            text-transform: uppercase;
         }
         
         .footer-section ul {
@@ -358,6 +546,7 @@
         .footer-section a {
             color: #ccc;
             transition: color 0.2s;
+            font-size: 12px;
         }
         
         .footer-section a:hover {
@@ -371,79 +560,56 @@
             color: #999;
         }
         
+        .footer-bottom p {
+            margin-bottom: 5px;
+        }
+        
+        .footer-bottom a {
+            color: #f68b1e;
+            transition: opacity 0.2s;
+        }
+        
+        .footer-bottom a:hover {
+            opacity: 0.8;
+        }
+        
+        .payment-methods {
+            margin-top: 10px;
+            color: #999;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .payment-methods span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
         .social-links {
             display: flex;
             gap: 15px;
             margin-top: 15px;
+            justify-content: center;
         }
         
         .social-links a {
             color: #fff;
-            font-size: 18px;
+            font-size: 20px;
             transition: color 0.2s;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background-color: rgba(255,255,255,0.1);
         }
         
         .social-links a:hover {
             color: #f68b1e;
-        }
-        
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .top-header {
-                display: none;
-            }
-            
-            .main-header .container {
-                gap: 10px;
-            }
-            
-            .mobile-menu-toggle {
-                display: block;
-            }
-            
-            .search-container {
-                max-width: none;
-            }
-            
-            .header-actions span {
-                display: none;
-            }
-            
-            .header-actions {
-                gap: 15px;
-            }
-            
-            .navigation {
-                display: none;
-            }
-            
-            .footer-sections {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 20px;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            .logo img {
-                height: 28px;
-            }
-            
-            .search-form input {
-                padding: 8px 12px;
-                font-size: 12px;
-            }
-            
-            .search-form button {
-                padding: 8px 15px;
-            }
-            
-            .header-action i {
-                font-size: 18px;
-            }
-            
-            .footer-sections {
-                grid-template-columns: 1fr;
-            }
+            background-color: rgba(246, 139, 30, 0.1);
         }
         
         /* Utility Classes */
@@ -467,6 +633,156 @@
             width: 100%;
             padding: 0 15px;
         }
+        
+        /* Responsive Design */
+        @media (max-width: 992px) {
+            .footer-sections {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 25px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .top-header {
+                font-size: 10px;
+                padding: 6px 0;
+            }
+            
+            .top-header a {
+                margin-left: 10px;
+            }
+            
+            .main-header {
+                padding: 10px 0;
+            }
+            
+            .main-header .container {
+                gap: 10px;
+            }
+            
+            .mobile-menu-toggle {
+                display: block;
+            }
+            
+            .logo-text {
+                font-size: 24px;
+            }
+            
+            .search-container {
+                order: 4;
+                flex-basis: 100%;
+                max-width: none;
+            }
+            
+            .search-form button span {
+                display: none;
+            }
+            
+            .search-form button {
+                padding: 10px 15px;
+            }
+            
+            .header-actions {
+                gap: 12px;
+            }
+            
+            .header-action span {
+                display: none;
+            }
+            
+            .header-action i {
+                font-size: 22px;
+            }
+            
+            .navigation {
+                display: none;
+            }
+            
+            .footer-sections {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+            }
+            
+            .payment-methods {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .top-header .right a:last-child {
+                display: none;
+            }
+            
+            .logo-text {
+                font-size: 20px;
+            }
+            
+            .logo-badge {
+                font-size: 8px;
+                padding: 1px 3px;
+            }
+            
+            .search-form input {
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+            
+            .search-form button {
+                padding: 8px 12px;
+            }
+            
+            .header-action i {
+                font-size: 20px;
+            }
+            
+            .header-actions {
+                gap: 10px;
+            }
+            
+            .footer-sections {
+                grid-template-columns: 1fr;
+                gap: 25px;
+            }
+            
+            .footer {
+                padding: 30px 0 15px;
+            }
+        }
+        
+        @media (max-width: 375px) {
+            .main-header .container {
+                gap: 8px;
+                padding: 0 10px;
+            }
+            
+            .logo-text {
+                font-size: 18px;
+            }
+            
+            .search-form input {
+                padding: 8px 10px;
+                font-size: 11px;
+            }
+            
+            .header-actions {
+                gap: 8px;
+            }
+            
+            .header-action i {
+                font-size: 18px;
+            }
+        }
+        
+        /* Smooth scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        /* Loading state */
+        .loading {
+            pointer-events: none;
+            opacity: 0.6;
+        }
     </style>
     
     {% block extra_css %}{% endblock %}
@@ -480,7 +796,7 @@
             </div>
             <div class="right">
                 <a href="#"><i class="bi bi-question-circle"></i>Help</a>
-                <a href="#"><i class="bi bi-telephone"></i>0757790687</a>
+                <a href="tel:0757790687"><i class="bi bi-telephone"></i>0757790687</a>
             </div>
         </div>
     </div>
@@ -488,36 +804,65 @@
     <!-- Main Header -->
     <div class="main-header">
         <div class="container">
-            <div class="mobile-menu-toggle" onclick="toggleMobileSidebar()">
+            <div class="mobile-menu-toggle" onclick="toggleMobileSidebar()" aria-label="Toggle menu">
                 <i class="bi bi-list"></i>
             </div>
             
-            <a href="/" class="logo">
-                <span style="font-size: 28px; font-weight: 900;">JUMIA</span>
-                <span style="font-size: 10px; background: #f68b1e; color: #fff; padding: 2px 4px; border-radius: 3px; margin-left: 3px;">V2</span>
+            <a href="/" class="logo" aria-label="Jumia Kenya Home">
+                <span class="logo-text">JUMIA</span>
+                <span class="logo-badge">V2</span>
             </a>
             
             <div class="search-container">
-                <form class="search-form" method="GET" action="{% url 'search' %}">
-                    <input type="text" name="q" placeholder="Search products, brands and categories" value="{{ request.GET.q }}">
-                    <button type="submit">
-                        <i class="bi bi-search"></i> SEARCH
+                <form class="search-form" method="GET" action="{% url 'search' %}" role="search">
+                    <input type="text" 
+                           name="q" 
+                           placeholder="Search products, brands and categories" 
+                           value="{{ request.GET.q }}"
+                           aria-label="Search products">
+                    <button type="submit" aria-label="Search">
+                        <i class="bi bi-search"></i>
+                        <span>SEARCH</span>
                     </button>
                 </form>
             </div>
             
             <div class="header-actions">
-                <a href="{% url 'account' %}" class="header-action">
-                    <i class="bi bi-person"></i>
-                    <span>Account</span>
-                </a>
-                
-                <a href="{% url 'wishlist' %}" class="header-action">
+                <!-- Account Dropdown -->
+                <div class="header-action dropdown">
+                    <a href="#" 
+                       class="account-toggle" 
+                       onclick="toggleDropdown(event)"
+                       aria-haspopup="true" 
+                       aria-expanded="false">
+                        <i class="bi bi-person"></i>
+                        <span>Account</span>
+                        <i class="bi bi-caret-down-fill dropdown-icon"></i>
+                    </a>
+
+                    <ul class="dropdown-menu" role="menu" aria-label="Account menu">
+                        {% if user.is_authenticated %}
+                        <li role="none"><a role="menuitem" href="{% url 'account_overview' %}"><i class="bi bi-person-circle"></i> My Account</a></li>
+                        <li role="none"><a role="menuitem" href="{% url 'orders' %}"><i class="bi bi-box-seam"></i> Orders</a></li>
+                        <li role="none"><a role="menuitem" href="{% url 'wishlist' %}"><i class="bi bi-heart"></i> Wishlist</a></li>
+                        <li role="none"><a role="menuitem" href="#"><i class="bi bi-gift"></i> Vouchers</a></li>
+                        <li class="divider" role="separator"></li>
+                        <li role="none"><a role="menuitem" href="{% url 'logout' %}"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+                        {% else %}
+                        <li role="none"><a role="menuitem" href="{% url 'login' %}"><i class="bi bi-box-arrow-in-right"></i> Login</a></li>
+                        <li role="none"><a role="menuitem" href="{% url 'register' %}"><i class="bi bi-person-plus"></i> Register</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+
+                <!-- Wishlist -->
+                <a href="{% url 'wishlist' %}" class="header-action" aria-label="Wishlist">
                     <i class="bi bi-heart"></i>
                     <span>Wishlist</span>
                 </a>
-                
-                <a href="{% url 'cart' %}" class="header-action">
+
+                <!-- Cart -->
+                <a href="{% url 'cart' %}" class="header-action" aria-label="Shopping cart">
                     <i class="bi bi-cart3"></i>
                     <span>Cart</span>
                     {% if cart_item_count > 0 %}
@@ -552,26 +897,34 @@
     </nav>
     
     <!-- Mobile Sidebar -->
-    <div class="mobile-sidebar" id="mobileSidebar">
+    <div class="mobile-sidebar" id="mobileSidebar" role="navigation" aria-label="Mobile menu">
         <div class="sidebar-header">
             <div>
                 <strong>Menu</strong>
             </div>
-            <div class="sidebar-close" onclick="toggleMobileSidebar()">
+            <div class="sidebar-close" onclick="toggleMobileSidebar()" aria-label="Close menu">
                 <i class="bi bi-x"></i>
             </div>
         </div>
         <ul class="sidebar-menu">
-            <li><a href="{% url 'account' %}"><i class="bi bi-person"></i>My Account</a></li>
+            {% if user.is_authenticated %}
+            <li><a href="{% url 'account_overview' %}"><i class="bi bi-person"></i>My Account</a></li>
             <li><a href="{% url 'orders' %}"><i class="bi bi-box-seam"></i>Orders</a></li>
             <li><a href="{% url 'wishlist' %}"><i class="bi bi-heart"></i>Saved Items</a></li>
-            <li style="border-bottom: 2px solid #f5f5f5; margin: 10px 0;"></li>
+            <li class="sidebar-divider"></li>
+            {% else %}
+            <li><a href="{% url 'login' %}"><i class="bi bi-box-arrow-in-right"></i>Login</a></li>
+            <li><a href="{% url 'register' %}"><i class="bi bi-person-plus"></i>Register</a></li>
+            <li class="sidebar-divider"></li>
+            {% endif %}
+            
             {% for category in categories %}
             <li><a href="{% url 'category_products' category.slug %}">{{ category.name }}</a></li>
             {% endfor %}
-            <li style="border-bottom: 2px solid #f5f5f5; margin: 10px 0;"></li>
+            
+            <li class="sidebar-divider"></li>
             <li><a href="#"><i class="bi bi-question-circle"></i>Help Center</a></li>
-            <li><a href="#"><i class="bi bi-telephone"></i>Contact Us</a></li>
+            <li><a href="tel:0757790687"><i class="bi bi-telephone"></i>Contact Us</a></li>
         </ul>
     </div>
     
@@ -587,7 +940,7 @@
         <div class="container">
             <div class="footer-sections">
                 <div class="footer-section">
-                    <h4>LET US HELP YOU</h4>
+                    <h4>Let Us Help You</h4>
                     <ul>
                         <li><a href="#">Help Center</a></li>
                         <li><a href="#">How to shop on Jumia?</a></li>
@@ -600,7 +953,7 @@
                 </div>
                 
                 <div class="footer-section">
-                    <h4>ABOUT JUMIA</h4>
+                    <h4>About Jumia</h4>
                     <ul>
                         <li><a href="#">About us</a></li>
                         <li><a href="#">Jumia careers</a></li>
@@ -614,7 +967,7 @@
                 </div>
                 
                 <div class="footer-section">
-                    <h4>MAKE MONEY WITH JUMIA</h4>
+                    <h4>Make Money With Jumia</h4>
                     <ul>
                         <li><a href="#">Sell on Jumia</a></li>
                         <li><a href="#">Vendor hub</a></li>
@@ -624,7 +977,7 @@
                 </div>
                 
                 <div class="footer-section">
-                    <h4>JUMIA INTERNATIONAL</h4>
+                    <h4>Jumia International</h4>
                     <ul>
                         <li><a href="#">Algeria</a></li>
                         <li><a href="#">Egypt</a></li>
@@ -640,49 +993,169 @@
             </div>
             
             <div class="footer-section">
-                <h4>PAYMENT METHODS & DELIVERY PARTNERS</h4>
-                <div style="margin-top: 10px; color: #999;">
-                    <span style="margin-right: 15px;"><i class="bi bi-credit-card"></i> Card</span>
-                    <span style="margin-right: 15px;"><i class="bi bi-phone"></i> M-Pesa</span>
+                <h4>Payment Methods & Delivery Partners</h4>
+                <div class="payment-methods">
+                    <span><i class="bi bi-credit-card"></i> Card</span>
+                    <span><i class="bi bi-phone"></i> M-Pesa</span>
                     <span><i class="bi bi-cash"></i> Cash on Delivery</span>
                 </div>
                 
                 <div class="social-links">
-                    <a href="#"><i class="bi bi-facebook"></i></a>
-                    <a href="#"><i class="bi bi-twitter"></i></a>
-                    <a href="#"><i class="bi bi-instagram"></i></a>
-                    <a href="#"><i class="bi bi-youtube"></i></a>
+                    <a href="#" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
+                    <a href="#" aria-label="Twitter"><i class="bi bi-twitter"></i></a>
+                    <a href="#" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+                    <a href="#" aria-label="YouTube"><i class="bi bi-youtube"></i></a>
                 </div>
             </div>
             
             <div class="footer-bottom">
                 <p>&copy; 2024 Jumia Kenya V2 | Developed by Steve Ongera</p>
                 <p style="margin-top: 5px; font-size: 11px;">
-                    <a href="tel:0757790687" style="color: #f68b1e;">0757790687</a> | 
-                    <a href="mailto:steveongera001@gmail.com" style="color: #f68b1e;">steveongera001@gmail.com</a>
+                    <a href="tel:0757790687">0757790687</a> | 
+                    <a href="mailto:steveongera001@gmail.com">steveongera001@gmail.com</a>
                 </p>
             </div>
         </div>
     </footer>
     
     <script>
+        // Toggle Mobile Sidebar
         function toggleMobileSidebar() {
             const sidebar = document.getElementById('mobileSidebar');
             const overlay = document.getElementById('mobileOverlay');
-            sidebar.classList.toggle('active');
-            overlay.classList.toggle('active');
+            const isActive = sidebar.classList.contains('active');
+            
+            if (isActive) {
+                sidebar.classList.remove('active');
+                overlay.classList.remove('active');
+                document.body.style.overflow = '';
+            } else {
+                sidebar.classList.add('active');
+                overlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
         }
         
-        // Close sidebar when clicking outside
-        document.addEventListener('click', function(event) {
-            const sidebar = document.getElementById('mobileSidebar');
-            const toggle = document.querySelector('.mobile-menu-toggle');
+        // Toggle Account Dropdown
+        function toggleDropdown(event) {
+            event.preventDefault();
+            event.stopPropagation();
             
-            if (!sidebar.contains(event.target) && !toggle.contains(event.target)) {
-                sidebar.classList.remove('active');
-                document.getElementById('mobileOverlay').classList.remove('active');
+            const dropdown = event.currentTarget.closest('.dropdown');
+            const isOpen = dropdown.classList.contains('open');
+            
+            // Close all dropdowns first
+            document.querySelectorAll('.dropdown').forEach(d => {
+                d.classList.remove('open');
+                const toggle = d.querySelector('.account-toggle');
+                if (toggle) toggle.setAttribute('aria-expanded', 'false');
+            });
+            
+            // Toggle current dropdown
+            if (!isOpen) {
+                dropdown.classList.add('open');
+                event.currentTarget.setAttribute('aria-expanded', 'true');
+            }
+        }
+        
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdowns = document.querySelectorAll('.dropdown');
+            dropdowns.forEach(dropdown => {
+                if (!dropdown.contains(event.target)) {
+                    dropdown.classList.remove('open');
+                    const toggle = dropdown.querySelector('.account-toggle');
+                    if (toggle) toggle.setAttribute('aria-expanded', 'false');
+                }
+            });
+        });
+        
+        // Close sidebar when clicking on a link (mobile)
+        document.querySelectorAll('.sidebar-menu a').forEach(link => {
+            link.addEventListener('click', function() {
+                if (window.innerWidth <= 768) {
+                    toggleMobileSidebar();
+                }
+            });
+        });
+        
+        // Handle window resize
+        let resizeTimer;
+        window.addEventListener('resize', function() {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function() {
+                if (window.innerWidth > 768) {
+                    const sidebar = document.getElementById('mobileSidebar');
+                    const overlay = document.getElementById('mobileOverlay');
+                    sidebar.classList.remove('active');
+                    overlay.classList.remove('active');
+                    document.body.style.overflow = '';
+                }
+            }, 250);
+        });
+        
+        // Prevent body scroll when sidebar is open
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.target.classList.contains('active')) {
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    document.body.style.overflow = '';
+                }
+            });
+        });
+        
+        const sidebar = document.getElementById('mobileSidebar');
+        if (sidebar) {
+            observer.observe(sidebar, { attributes: true, attributeFilter: ['class'] });
+        }
+        
+        // Keyboard navigation for dropdown
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                document.querySelectorAll('.dropdown.open').forEach(dropdown => {
+                    dropdown.classList.remove('open');
+                    const toggle = dropdown.querySelector('.account-toggle');
+                    if (toggle) {
+                        toggle.setAttribute('aria-expanded', 'false');
+                        toggle.focus();
+                    }
+                });
+                
+                // Also close sidebar if open
+                const sidebar = document.getElementById('mobileSidebar');
+                const overlay = document.getElementById('mobileOverlay');
+                if (sidebar && sidebar.classList.contains('active')) {
+                    sidebar.classList.remove('active');
+                    overlay.classList.remove('active');
+                    document.body.style.overflow = '';
+                }
             }
         });
+        
+        // Touch handling for mobile dropdowns
+        if ('ontouchstart' in window) {
+            document.querySelectorAll('.dropdown .account-toggle').forEach(toggle => {
+                toggle.addEventListener('touchstart', function(e) {
+                    const dropdown = this.closest('.dropdown');
+                    const isOpen = dropdown.classList.contains('open');
+                    
+                    // Close all other dropdowns
+                    document.querySelectorAll('.dropdown').forEach(d => {
+                        if (d !== dropdown) {
+                            d.classList.remove('open');
+                        }
+                    });
+                    
+                    // Toggle current dropdown
+                    if (!isOpen) {
+                        e.preventDefault();
+                        dropdown.classList.add('open');
+                        this.setAttribute('aria-expanded', 'true');
+                    }
+                });
+            });
+        }
     </script>
     
     {% block extra_js %}{% endblock %}
