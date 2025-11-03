@@ -1,4 +1,8 @@
+from dotenv import load_dotenv
 import os
+
+load_dotenv()
+
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -14,7 +18,7 @@ SECRET_KEY = 'django-insecure-f6^8ru)l5k0ph81rgny-kgofeb)$o=&e%!nj5ll2^wiqsc(hju
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -28,6 +32,12 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'e_commerce',
 ]
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://f412675c5f97.ngrok-free.app',
+    'https://*.ngrok.io',
+]
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -148,14 +158,14 @@ if not DEBUG:
     SECURE_HSTS_PRELOAD = True
 
 
-# M-Pesa Credentials (Get from Safaricom Daraja Portal)
-MPESA_ENVIRONMENT = 'sandbox'  # or 'production'
+MPESA_ENVIRONMENT = os.getenv('MPESA_ENVIRONMENT', 'sandbox')
 
-# Sandbox credentials
-MPESA_CONSUMER_KEY = 'your_consumer_key_here'
-MPESA_CONSUMER_SECRET = 'your_consumer_secret_here'
-MPESA_SHORTCODE = 'your_shortcode_here'  # Usually 174379 for sandbox
-MPESA_PASSKEY = 'your_passkey_here'
+MPESA_CONSUMER_KEY = os.getenv('MPESA_CONSUMER_KEY')
+MPESA_CONSUMER_SECRET = os.getenv('MPESA_CONSUMER_SECRET')
+MPESA_SHORTCODE = os.getenv('MPESA_SHORTCODE')
+MPESA_PASSKEY = os.getenv('MPESA_PASSKEY')
+MPESA_CALLBACK_URL = os.getenv('MPESA_CALLBACK_URL')
+
 
 # API Endpoints
 if MPESA_ENVIRONMENT == 'sandbox':
@@ -169,7 +179,7 @@ else:
 
 # Callback URL (must be publicly accessible)
 # For local testing, use ngrok: https://ngrok.com
-MPESA_CALLBACK_URL = 'https://your-domain.com/payment/mpesa/callback/'
+MPESA_CALLBACK_URL = 'https://f412675c5f97.ngrok-free.app/payment/mpesa/callback/'
 
 # For local development with ngrok:
 # 1. Install ngrok: https://ngrok.com/download
