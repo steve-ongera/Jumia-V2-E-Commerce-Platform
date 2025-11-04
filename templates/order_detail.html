@@ -5,6 +5,17 @@
 
 {% block extra_css %}
 <style>
+    :root {
+        --jumia-orange: #f68b1e;
+        --jumia-orange-light: #feefea;
+        --jumia-dark: #282828;
+        --jumia-gray: #666;
+        --jumia-light-gray: #f0f0f0;
+        --jumia-white: #ffffff;
+        --success: #28a745;
+        --danger: #dc3545;
+    }
+
     * {
         margin: 0;
         padding: 0;
@@ -13,8 +24,9 @@
 
     body {
         font-family: Arial, sans-serif;
-        background-color: #f5f5f5;
-        color: #333;
+        background-color: #f8f9fa;
+        color: var(--jumia-dark);
+        line-height: 1.5;
     }
 
     .container {
@@ -25,24 +37,25 @@
 
     /* Header */
     .order-header {
-        background: white;
-        border-radius: 4px;
+        background: var(--jumia-white);
         padding: 20px;
         margin-bottom: 20px;
         display: flex;
         justify-content: space-between;
         align-items: center;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
 
     .order-info h1 {
         font-size: 24px;
-        color: #282828;
+        color: var(--jumia-dark);
         margin-bottom: 5px;
+        font-weight: 600;
     }
 
     .order-date {
         font-size: 14px;
-        color: #666;
+        color: var(--jumia-gray);
     }
 
     .order-actions {
@@ -52,10 +65,9 @@
 
     .action-btn {
         padding: 10px 20px;
-        border: 1px solid #f68b1e;
-        background: white;
-        color: #f68b1e;
-        border-radius: 4px;
+        border: 1px solid var(--jumia-orange);
+        background: var(--jumia-white);
+        color: var(--jumia-orange);
         cursor: pointer;
         font-size: 14px;
         font-weight: 500;
@@ -63,22 +75,22 @@
         display: inline-flex;
         align-items: center;
         gap: 5px;
-        transition: all 0.3s;
+        transition: all 0.2s;
     }
 
     .action-btn:hover {
-        background: #f68b1e;
-        color: white;
+        background: var(--jumia-orange);
+        color: var(--jumia-white);
     }
 
     .action-btn.cancel {
-        border-color: #dc3545;
-        color: #dc3545;
+        border-color: var(--danger);
+        color: var(--danger);
     }
 
     .action-btn.cancel:hover {
-        background: #dc3545;
-        color: white;
+        background: var(--danger);
+        color: var(--jumia-white);
     }
 
     /* Main Layout */
@@ -96,18 +108,18 @@
     }
 
     .order-card {
-        background: white;
-        border-radius: 4px;
+        background: var(--jumia-white);
         padding: 20px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
 
     .card-title {
         font-size: 18px;
-        font-weight: bold;
-        color: #282828;
+        font-weight: 600;
+        color: var(--jumia-dark);
         margin-bottom: 20px;
         padding-bottom: 15px;
-        border-bottom: 2px solid #f0f0f0;
+        border-bottom: 1px solid var(--jumia-light-gray);
     }
 
     /* Order Status Timeline */
@@ -124,8 +136,8 @@
         top: 20px;
         left: 0;
         right: 0;
-        height: 2px;
-        background: #f0f0f0;
+        height: 1px;
+        background: var(--jumia-light-gray);
         z-index: 0;
     }
 
@@ -139,52 +151,45 @@
     .status-icon {
         width: 40px;
         height: 40px;
-        border-radius: 50%;
-        background: #f0f0f0;
-        color: #999;
+        background: var(--jumia-light-gray);
+        color: var(--jumia-gray);
         display: flex;
         align-items: center;
         justify-content: center;
         margin: 0 auto 10px;
         font-size: 18px;
-        border: 3px solid white;
+        border: 3px solid var(--jumia-white);
         transition: all 0.3s;
     }
 
     .status-step.completed .status-icon {
-        background: #28a745;
-        color: white;
+        background: var(--success);
+        color: var(--jumia-white);
     }
 
     .status-step.active .status-icon {
-        background: #f68b1e;
-        color: white;
-        animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.1); }
+        background: var(--jumia-orange);
+        color: var(--jumia-white);
     }
 
     .status-label {
         font-size: 13px;
-        color: #666;
+        color: var(--jumia-gray);
         font-weight: 500;
     }
 
     .status-step.completed .status-label {
-        color: #28a745;
+        color: var(--success);
     }
 
     .status-step.active .status-label {
-        color: #f68b1e;
-        font-weight: bold;
+        color: var(--jumia-orange);
+        font-weight: 600;
     }
 
     .status-date {
         font-size: 11px;
-        color: #999;
+        color: var(--jumia-gray);
         margin-top: 5px;
     }
 
@@ -196,8 +201,7 @@
     }
 
     .vendor-group {
-        border: 1px solid #f0f0f0;
-        border-radius: 4px;
+        border: 1px solid var(--jumia-light-gray);
         padding: 15px;
     }
 
@@ -207,21 +211,20 @@
         gap: 10px;
         margin-bottom: 15px;
         padding-bottom: 10px;
-        border-bottom: 1px solid #f0f0f0;
+        border-bottom: 1px solid var(--jumia-light-gray);
     }
 
     .vendor-name {
         font-size: 14px;
-        color: #666;
+        color: var(--jumia-gray);
     }
 
     .express-badge {
-        background: #feefea;
-        color: #f68b1e;
+        background: var(--jumia-orange-light);
+        color: var(--jumia-orange);
         padding: 3px 10px;
-        border-radius: 3px;
         font-size: 11px;
-        font-weight: bold;
+        font-weight: 600;
         display: inline-flex;
         align-items: center;
         gap: 5px;
@@ -232,7 +235,7 @@
         grid-template-columns: 80px 1fr auto;
         gap: 15px;
         padding: 15px 0;
-        border-bottom: 1px solid #f0f0f0;
+        border-bottom: 1px solid var(--jumia-light-gray);
     }
 
     .item-row:last-child {
@@ -243,8 +246,7 @@
         width: 80px;
         height: 80px;
         object-fit: contain;
-        border: 1px solid #f0f0f0;
-        border-radius: 4px;
+        border: 1px solid var(--jumia-light-gray);
     }
 
     .item-details {
@@ -255,23 +257,23 @@
 
     .item-name {
         font-size: 14px;
-        color: #282828;
+        color: var(--jumia-dark);
         margin-bottom: 5px;
     }
 
     .item-brand {
         font-size: 13px;
-        color: #f68b1e;
+        color: var(--jumia-orange);
     }
 
     .item-variant {
         font-size: 13px;
-        color: #666;
+        color: var(--jumia-gray);
     }
 
     .item-quantity {
         font-size: 13px;
-        color: #666;
+        color: var(--jumia-gray);
     }
 
     .item-pricing {
@@ -280,27 +282,27 @@
 
     .item-price {
         font-size: 16px;
-        font-weight: bold;
-        color: #282828;
+        font-weight: 600;
+        color: var(--jumia-dark);
     }
 
     .item-unit-price {
         font-size: 12px;
-        color: #999;
+        color: var(--jumia-gray);
         margin-top: 3px;
     }
 
     .review-btn {
         margin-top: 10px;
         padding: 6px 15px;
-        background: #f68b1e;
-        color: white;
+        background: var(--jumia-orange);
+        color: var(--jumia-white);
         border: none;
-        border-radius: 4px;
         cursor: pointer;
         font-size: 12px;
         text-decoration: none;
         display: inline-block;
+        transition: background 0.2s;
     }
 
     .review-btn:hover {
@@ -315,18 +317,18 @@
     }
 
     .sidebar-card {
-        background: white;
-        border-radius: 4px;
+        background: var(--jumia-white);
         padding: 20px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
 
     .sidebar-title {
         font-size: 16px;
-        font-weight: bold;
-        color: #282828;
+        font-weight: 600;
+        color: var(--jumia-dark);
         margin-bottom: 15px;
         padding-bottom: 10px;
-        border-bottom: 1px solid #f0f0f0;
+        border-bottom: 1px solid var(--jumia-light-gray);
     }
 
     .summary-row {
@@ -337,27 +339,26 @@
     }
 
     .summary-label {
-        color: #666;
+        color: var(--jumia-gray);
     }
 
     .summary-value {
-        color: #282828;
+        color: var(--jumia-dark);
         font-weight: 500;
     }
 
     .summary-total {
         margin-top: 10px;
         padding-top: 15px;
-        border-top: 2px solid #f0f0f0;
+        border-top: 1px solid var(--jumia-light-gray);
         font-size: 18px;
-        font-weight: bold;
+        font-weight: 600;
     }
 
     /* Payment Info */
     .payment-status {
         display: inline-block;
         padding: 5px 12px;
-        border-radius: 20px;
         font-size: 12px;
         font-weight: 500;
     }
@@ -394,11 +395,11 @@
     .delivery-info {
         font-size: 14px;
         line-height: 1.6;
-        color: #666;
+        color: var(--jumia-gray);
     }
 
     .delivery-info strong {
-        color: #282828;
+        color: var(--jumia-dark);
         display: block;
         margin-bottom: 5px;
     }
@@ -408,9 +409,8 @@
         align-items: center;
         gap: 8px;
         padding: 8px 12px;
-        background: #feefea;
-        color: #f68b1e;
-        border-radius: 4px;
+        background: var(--jumia-orange-light);
+        color: var(--jumia-orange);
         font-size: 13px;
         font-weight: 500;
         margin: 10px 0;
@@ -418,9 +418,8 @@
 
     .tracking-number {
         display: inline-block;
-        background: #f0f0f0;
+        background: var(--jumia-light-gray);
         padding: 8px 12px;
-        border-radius: 4px;
         font-family: monospace;
         font-size: 14px;
         margin-top: 10px;
@@ -430,7 +429,6 @@
     .status-badge {
         display: inline-block;
         padding: 5px 12px;
-        border-radius: 20px;
         font-size: 13px;
         font-weight: 500;
     }
@@ -508,6 +506,16 @@
             text-align: left;
             margin-top: 10px;
         }
+        
+        .order-actions {
+            flex-direction: column;
+            width: 100%;
+        }
+        
+        .action-btn {
+            width: 100%;
+            justify-content: center;
+        }
     }
 </style>
 {% endblock %}
@@ -525,17 +533,17 @@
             <form method="POST" action="{% url 'cancel_order' order.id %}" style="display: inline;">
                 {% csrf_token %}
                 <button type="submit" class="action-btn cancel" onclick="return confirm('Are you sure you want to cancel this order?')">
-                    <i class="fas fa-times"></i> Cancel Order
+                    <i class="bi bi-x-circle"></i> Cancel Order
                 </button>
             </form>
             {% endif %}
             
             <a href="{% url 'download_invoice' order.id %}" class="action-btn">
-                <i class="fas fa-download"></i> Download Invoice
+                <i class="bi bi-download"></i> Download Invoice
             </a>
             
             <a href="{% url 'order_list' %}" class="action-btn">
-                <i class="fas fa-list"></i> All Orders
+                <i class="bi bi-list-ul"></i> All Orders
             </a>
         </div>
     </div>
@@ -560,9 +568,9 @@
                     <div class="status-step {% if step.completed %}completed{% elif forloop.counter0 == 0 and not step.completed %}active{% endif %}">
                         <div class="status-icon">
                             {% if step.completed %}
-                            <i class="fas fa-check"></i>
+                            <i class="bi bi-check-lg"></i>
                             {% else %}
-                            <i class="fas fa-circle"></i>
+                            <i class="bi bi-circle"></i>
                             {% endif %}
                         </div>
                         <div class="status-label">{{ step.label }}</div>
@@ -575,9 +583,9 @@
                 {% endif %}
 
                 {% if estimated_delivery and order.status not in 'delivered,cancelled' %}
-                <div style="text-align: center; margin-top: 20px; padding: 15px; background: #feefea; border-radius: 4px;">
-                    <strong style="color: #f68b1e;">Estimated Delivery:</strong>
-                    <span style="color: #282828;">{{ estimated_delivery|date:"d M Y" }}</span>
+                <div style="text-align: center; margin-top: 20px; padding: 15px; background: var(--jumia-orange-light);">
+                    <strong style="color: var(--jumia-orange);">Estimated Delivery:</strong>
+                    <span style="color: var(--jumia-dark);">{{ estimated_delivery|date:"d M Y" }}</span>
                 </div>
                 {% endif %}
             </div>
@@ -593,7 +601,7 @@
                             <span class="vendor-name">Sold by {{ shipment.vendor.business_name }}</span>
                             {% if shipment.vendor.is_verified %}
                             <span class="express-badge">
-                                <i class="fas fa-bolt"></i> EXPRESS
+                                <i class="bi bi-lightning-charge"></i> EXPRESS
                             </span>
                             {% endif %}
                         </div>
@@ -648,9 +656,9 @@
                 
                 <div class="delivery-method">
                     {% if order.delivery_method == 'pickup_station' %}
-                    <i class="fas fa-store"></i> Pickup Station
+                    <i class="bi bi-shop"></i> Pickup Station
                     {% else %}
-                    <i class="fas fa-truck"></i> Home Delivery
+                    <i class="bi bi-truck"></i> Home Delivery
                     {% endif %}
                 </div>
 
@@ -705,7 +713,7 @@
                 {% if order.discount > 0 %}
                 <div class="summary-row">
                     <span class="summary-label">Discount</span>
-                    <span class="summary-value" style="color: #28a745;">
+                    <span class="summary-value" style="color: var(--success);">
                         -KSh {{ order.discount|floatformat:0 }}
                     </span>
                 </div>
@@ -764,18 +772,18 @@
                     {% endif %}
                 </div>
                 {% else %}
-                <p style="color: #666; font-size: 14px;">No payment information available</p>
+                <p style="color: var(--jumia-gray); font-size: 14px;">No payment information available</p>
                 {% endif %}
             </div>
 
             <!-- Need Help -->
             <div class="sidebar-card">
                 <h3 class="sidebar-title">Need Help?</h3>
-                <p style="font-size: 14px; color: #666; margin-bottom: 15px;">
+                <p style="font-size: 14px; color: var(--jumia-gray); margin-bottom: 15px;">
                     Have questions about your order?
                 </p>
                 <a href="#" class="action-btn" style="width: 100%; justify-content: center;">
-                    <i class="fas fa-headset"></i> Contact Support
+                    <i class="bi bi-headset"></i> Contact Support
                 </a>
             </div>
         </div>

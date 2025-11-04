@@ -34,7 +34,7 @@ INSTALLED_APPS = [
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://f412675c5f97.ngrok-free.app',
+    'https://6c35cb9e4cf6.ngrok-free.app',
     'https://*.ngrok.io',
 ]
 
@@ -179,7 +179,7 @@ else:
 
 # Callback URL (must be publicly accessible)
 # For local testing, use ngrok: https://ngrok.com
-MPESA_CALLBACK_URL = 'https://f412675c5f97.ngrok-free.app/payment/mpesa/callback/'
+MPESA_CALLBACK_URL = 'https://6c35cb9e4cf6.ngrok-free.app/payment/mpesa/callback/'
 
 # For local development with ngrok:
 # 1. Install ngrok: https://ngrok.com/download
