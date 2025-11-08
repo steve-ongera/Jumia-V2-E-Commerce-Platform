@@ -888,7 +888,7 @@ def wishlist(request):
         'total_items': wishlist_items.count(),
     }
     
-    return render(request, 'e_commerce/wishlist.html', context)
+    return render(request, 'wishlist.html', context)
 
 from django.views.decorators.http import require_POST
 @login_required

@@ -10,7 +10,6 @@ urlpatterns = [
     path('orders/', views.account_orders, name='account_orders'),
     path('inbox/', views.account_inbox, name='account_inbox'),
     path('reviews/', views.account_reviews, name='account_reviews'),
-    path('wishlist/', views.account_wishlist, name='account_wishlist'),
     path('followed-sellers/', views.account_followed_sellers, name='account_followed_sellers'),
     path('recently-viewed/', views.account_recently_viewed, name='account_recently_viewed'),
     path('settings/', views.account_settings, name='account_settings'),
