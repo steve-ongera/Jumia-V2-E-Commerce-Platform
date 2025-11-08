@@ -956,7 +956,7 @@
                     <div class="main-image" id="mainImage">
                         <button class="wishlist-btn {% if in_wishlist %}active{% endif %}" 
                                 onclick="toggleWishlist({{ product.id }})">
-                            <i class="{% if in_wishlist %}fas{% else %}far{% endif %} fa-heart"></i>
+                            <i class="{% if in_wishlist %}bi{% else %}bi{% endif %} bi-heart"></i>
                         </button>
                         {% if primary_image %}
                         <img src="{{ primary_image.image.url }}" alt="{{ product.name }}" id="mainImageImg">
