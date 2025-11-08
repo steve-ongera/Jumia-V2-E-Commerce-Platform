@@ -2777,16 +2777,6 @@ def account_reviews(request):
     return render(request, 'account/reviews.html', context)
 
 
-@login_required
-def account_wishlist(request):
-    """User wishlist"""
-    wishlist_items = Wishlist.objects.filter(user=request.user).select_related('product')
-    
-    context = {
-        'wishlist_items': wishlist_items,
-    }
-    
-    return render(request, 'account/wishlist.html', context)
 
 
 @login_required
