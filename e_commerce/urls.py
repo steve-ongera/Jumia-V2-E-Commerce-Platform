@@ -44,6 +44,7 @@ urlpatterns = [
     path('add-to-cart/<int:product_id>/', views.add_to_cart, name='add_to_cart'),
     path('remove-from-cart/<int:product_id>/', views.remove_from_cart, name='remove_from_cart'),
     path('update-cart/<int:product_id>/', views.update_cart, name='update_cart'),
+    path('products/wishlist/<int:product_id>/toggle/' , views.add_to_wishlist , name="add_to_wishlist"),
 
     # Authentication
     path('login/', views.login_view, name='login'),

@@ -890,24 +890,50 @@ def wishlist(request):
     
     return render(request, 'e_commerce/wishlist.html', context)
 
-
+from django.views.decorators.http import require_POST
 @login_required
+@require_POST
 def add_to_wishlist(request, product_id):
-    """Add product to wishlist"""
-    product = get_object_or_404(Product, id=product_id, is_active=True)
-    
-    wishlist_item, created = Wishlist.objects.get_or_create(
-        user=request.user,
-        product=product
-    )
-    
-    if created:
-        messages.success(request, f'Added {product.name} to wishlist.')
-    else:
-        messages.info(request, f'{product.name} is already in your wishlist.')
-    
-    # Return to previous page or product detail
-    return redirect(request.META.get('HTTP_REFERER', 'wishlist'))
+    """Toggle product in wishlist - AJAX endpoint"""
+    try:
+        product = get_object_or_404(Product, id=product_id, is_active=True)
+        
+        # Check if item already exists
+        wishlist_item = Wishlist.objects.filter(
+            user=request.user,
+            product=product
+        ).first()
+        
+        if wishlist_item:
+            # Remove from wishlist
+            wishlist_item.delete()
+            return JsonResponse({
+                'success': True,
+                'in_wishlist': False,
+                'message': f'{product.name} removed from wishlist'
+            })
+        else:
+            # Add to wishlist
+            Wishlist.objects.create(
+                user=request.user,
+                product=product
+            )
+            return JsonResponse({
+                'success': True,
+                'in_wishlist': True,
+                'message': f'{product.name} added to wishlist'
+            })
+            
+    except Product.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Product not found'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
 
 
 @login_required
